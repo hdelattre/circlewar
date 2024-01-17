@@ -1,0 +1,26 @@
+
+body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #f0f0f0;
+}
+
+#app {
+    text-align: center;
+}
+
+#numberDisplay {
+    margin: 20px;
+    font-size: 2em;
+    font-weight: bold;
+}
+
+button {
+    padding: 10px 20px;
+    font-size: 1em;
+    cursor: pointer;
+}
+
