@@ -21,6 +21,7 @@ const baseRadius = 20;
 // ------ GAME STATE ------
 let game_state = {
     players: [],
+    ai_players: [],
     bases: [],
     units: [],
 }
@@ -137,8 +138,32 @@ function resetDragging() {
 
 // ------ GAME FUNCTIONS ------
 
+function addPlayer(name) {
+    const playerIndex = game_state.players.length;
+    game_state.players.push(players[playerIndex]);
+    game_state.players[playerIndex].name = name;
+    return playerIndex;
+}
+
+function addAIPlayer(name) {
+    const playerIndex = addPlayer(name);
+    game_state.ai_players.push(playerIndex);
+}
+
+function addBase(base) {
+    game_state.bases.push(base);
+}
+
+function assignStartBase(base, playerid) {
+    base.ownerid = playerid;
+    base.units = 20;
+    base.trainingRate = 1;
+}
+
 function sendUnits(startBase, endBase, numUnits) {
+
     startBase.units -= numUnits;
+
     const unitSpacing = 20; // Adjust this value to control the spacing between units
 
     // Calculate the number of rows and columns in the hexagon formation
@@ -205,6 +230,10 @@ function getRandomLocation(margin = 0, existing_locations = []) {
     }
 
     return location;
+}
+
+function getRandomElement(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
 }
 
 function makeColorTranslucent(color, opacity) {
@@ -286,6 +315,55 @@ function updateState(deltaTime) {
         }
     });
     game_state.units = newUnits;
+
+    game_state.ai_players.forEach((playerid) => {
+        const player = game_state.players[playerid];
+        let playerBases = [];
+        let enemyBases = [];
+        let neutralBases = [];
+        game_state.bases.forEach((base) => {
+            if (base.ownerid == playerid) {
+                playerBases.push(base);
+            } else if (base.ownerid < 0) {
+                neutralBases.push(base);
+            } else {
+                enemyBases.push(base);
+            }
+        });
+
+        let playerUnits = [];
+        let enemyUnits = [];
+        game_state.units.forEach((unit) => {
+            if (unit.ownerid == playerid) {
+                playerUnits.push(unit);
+            } else {
+                enemyUnits.push(unit);
+            }
+        });
+
+        playerBases.forEach((base) => {
+            if (base.units < 10) return;
+            const neutralBase = neutralBases.length <= 0 ? null : neutralBases.reduce((prev, curr) => {
+                if (playerUnits.find((unit) => unit.targetid == curr.baseid)) return prev;
+                return prev.trainingRate > curr.trainingRate ? prev : curr;
+            });
+            const enemyBase = enemyBases.length <= 0 ? null : enemyBases.reduce((prev, curr) => {
+                if (playerUnits.find((unit) => unit.targetid == curr.baseid)) return prev;
+                if (curr.units < base.units + 2 && prev.units > curr.units + 2) return curr;
+                return prev.trainingRate > curr.trainingRate ? prev : curr;
+            });
+            if (enemyBase && base.units >= (enemyBase.units + 15)) {
+                const sendUnitCount = Math.floor(base.units);
+                sendUnits(base, enemyBase, sendUnitCount);
+                sendMessage_SendUnits(base.baseid, enemyBase.baseid, sendUnitCount);
+            }
+            else if (neutralBase && base.units >= (neutralBase.units + 3)) {
+                const sendUnitCount = Math.floor(base.units);
+                sendUnits(base, neutralBase, sendUnitCount);
+                sendMessage_SendUnits(base.baseid, neutralBase.baseid, sendUnitCount);
+            }
+        });
+    });
 }
 
 // ------ RENDERING ------
@@ -388,33 +466,28 @@ function startGame(is_host = true) {
     
     if (local_player == 0) {
         // Initialize game state
-        game_state.players.push(players[local_player]);
-        game_state.players.push(players[local_player + 1]);
+        addPlayer('Player 1');
+        addPlayer('Player 2');
+        addAIPlayer('GERB')
 
         for (let i = 0; i < 50; i++) {
-            game_state.bases.push({
+            const newBase = {
                 baseid: game_state.bases.length,
                 ownerid: -1,
                 units: 10,
                 trainingRate: .2 + Math.random(),
                 unittype: 'soldier',
                 location: getRandomLocation(baseRadius + 10, game_state.bases)
-            });
+            };
+            addBase(newBase);
         }
-        
+
         game_state.players.forEach((player) => {
             unowned_bases = game_state.bases.filter((base) => {
                 return base.ownerid < 0;
             });
-        
-            function getRandomElement(arr) {
-                return arr[Math.floor(Math.random() * arr.length)];
-            }
-        
-            let random_base = getRandomElement(unowned_bases);
-            random_base.ownerid = player.id;
-            random_base.units = 20;
-            random_base.trainingRate = 1;
+
+            assignStartBase(getRandomElement(unowned_bases), player.id);
         });
 
         sendMessage_gameState();
