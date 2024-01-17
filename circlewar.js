@@ -12,8 +12,8 @@ const unittypes = {
     }
 };
 const players = [
-    { id: 0, color: 'red', name: 'Player 1' },
-    { id: 1, color: 'blue', name: 'Player 2' },
+    { id: 0, color: 'blue', name: 'Player 1' },
+    { id: 1, color: 'red', name: 'Player 2' },
     { id: 2, color: 'green', name: 'Player 3' }
 ];
 const baseRadius = 20;
@@ -27,6 +27,8 @@ let game_state = {
 
 let local_player = 1;
 
+let lastDeltaTime = 0;
+
 
 // ------ INPUT HANDLING ------
 
@@ -38,6 +40,10 @@ let isDragging = false;
 let dragStartBase = null;
 let dragLocation = null;
 let dragEndBase = null;
+let hoveredBase = null;
+let hoveredTime = 0;
+const selectHoverTime = 0.4;
+let selectedBases = [];
 
 function canDragBase(base) {
     return base.ownerid == local_player;
@@ -46,66 +52,87 @@ function canDragBase(base) {
 function handleMouseDown(event) {
     const mouseX = event.clientX - canvas.offsetLeft;
     const mouseY = event.clientY - canvas.offsetTop;
+    dragLocation = { x: mouseX, y: mouseY };
 
-    game_state.bases.forEach((base) => {
-        if (!canDragBase(base)) return;
-        const distance = Math.sqrt(
-            Math.pow(mouseX - base.location.x, 2) +
-            Math.pow(mouseY - base.location.y, 2)
-        );
-        if (distance <= baseRadius) {
-            isDragging = true;
-            dragStartBase = base;
-        }
+    const selectedBase = game_state.bases.find((base) => {
+        if (!canDragBase(base)) return false;
+        return getDistance(dragLocation, base.location) <= baseRadius;
     });
+
+    if (selectedBase) {
+        resetDragging();
+        dragStartBase = selectedBase;
+        isDragging = true;
+        selectedBases.push(dragStartBase.baseid);
+    }
 }
 
 function handleMouseMove(event) {
     if (isDragging) {
         if (!canDragBase(dragStartBase)) {
-            stopDragging();
+            isDragging = false;
             return;
         }
 
         const mouseX = event.clientX - canvas.offsetLeft;
         const mouseY = event.clientY - canvas.offsetTop;
-
         dragLocation = { x: mouseX, y: mouseY };
+
+        if (hoveredBase) {
+            if (getDistance(hoveredBase.location, dragLocation) > baseRadius) {
+                hoveredBase = null;
+                hoveredTime = 0;
+            }
+            else {
+                hoveredTime += lastDeltaTime;
+                if (hoveredTime >= selectHoverTime && selectedBases.indexOf(hoveredBase.baseid) < 0) {
+                    selectedBases.push(hoveredBase.baseid);
+                }
+            }
+        }
+
+        hoveredBase = hoveredBase || game_state.bases.find((base) => {
+            if (base.ownerid != dragStartBase.ownerid) return false;
+            return getDistance(dragLocation, base.location) <= baseRadius;
+        });
     }
 }
 
 function handleMouseUp(event) {
     if (isDragging) {
         if (!canDragBase(dragStartBase)) {
-            stopDragging();
+            isDragging = false;
             return;
         }
         const mouseX = event.clientX - canvas.offsetLeft;
         const mouseY = event.clientY - canvas.offsetTop;
+        dragLocation = { x: mouseX, y: mouseY };
 
         dragEndBase = game_state.bases.find((base) => {
-            const distance = Math.sqrt(
-                Math.pow(mouseX - base.location.x, 2) +
-                Math.pow(mouseY - base.location.y, 2)
-            );
-            return distance <= baseRadius;
+            return getDistance(dragLocation, base.location) <= baseRadius;
         });
         
         if (dragStartBase && dragEndBase) {
-            const unitCount = Math.floor(dragStartBase.units);
-            sendUnits(dragStartBase, dragEndBase, unitCount);
-            sendMessage_SendUnits(dragStartBase, dragEndBase, unitCount);
+            selectedBases.forEach((baseid) => {
+                if (baseid == dragEndBase.baseid) return;
+                const base = game_state.bases[baseid];
+                const unitCount = Math.floor(base.units);
+                sendUnits(base, dragEndBase, unitCount);
+                sendMessage_SendUnits(baseid, dragEndBase.baseid, unitCount);
+            });
         }
 
-        stopDragging();
+        isDragging = false;
     }
 }
 
-function stopDragging() {
-    isDragging = false;
+function resetDragging() {
     dragStartBase = null;
     dragEndBase = null;
     dragLocation = null;
+    hoveredBase = null;
+    hoveredTime = 0;
+    selectedBases = [];
 }
 
 // ------ GAME FUNCTIONS ------
@@ -150,14 +177,10 @@ function sendUnits(startBase, endBase, numUnits) {
 
 // ------ UTILITY FUNCTIONS ------
 
-function makeTranslucent(color, opacity) {
-    const colors = {
-      red: '255, 0, 0',
-      green: '0, 128, 0',
-      blue: '0, 0, 255',
-    };
-  
-    return `rgba(${colors[color]}, ${opacity})`;
+function getDistance(locA, locB) {
+    const deltaX = locA.x - locB.x;
+    const deltaY = locA.y - locB.y;
+    return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 }
 
 function getRandomLocation(margin = 0, existing_locations = []) {
@@ -169,10 +192,7 @@ function getRandomLocation(margin = 0, existing_locations = []) {
     if (existing_locations.length > 0) {
         while (true) {
             overlapping_location = existing_locations.find((existing_location) => {
-                const deltaX = location.x - existing_location.location.x;
-                const deltaY = location.y - existing_location.location.y;
-                const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-                return distance < (baseRadius * 2 + margin);
+                return getDistance(location, existing_location.location) < (baseRadius * 2 + margin);
             });
             if (overlapping_location) {
                 location.x = Math.random() * (canvas.width - margin * 2) + margin;
@@ -185,6 +205,16 @@ function getRandomLocation(margin = 0, existing_locations = []) {
     }
 
     return location;
+}
+
+function makeColorTranslucent(color, opacity) {
+    const colors = {
+      red: '255, 0, 0',
+      green: '0, 128, 0',
+      blue: '0, 0, 255',
+    };
+  
+    return `rgba(${colors[color]}, ${opacity})`;
 }
 
 // ------ NETWORKING ------
@@ -209,12 +239,12 @@ function sendMessage_gameState() {
     sendMessage(message);
 }
 
-function sendMessage_SendUnits(startBase, endBase, numUnits) {
+function sendMessage_SendUnits(startBaseId, endBaseId, numUnits) {
     const message = {
         type: 'UnitsMoved',
         data: {
-            baseid: startBase.baseid,
-            targetid: endBase.baseid,
+            baseid: startBaseId,
+            targetid: endBaseId,
             units: numUnits,
         }
     }
@@ -232,10 +262,7 @@ function updateState(deltaTime) {
     const newUnits = [];
     game_state.units.forEach((unit) => {
         const targetBase = game_state.bases[unit.targetid];
-        const distance = Math.sqrt(
-            Math.pow(targetBase.location.x - unit.location.x, 2) +
-            Math.pow(targetBase.location.y - unit.location.y, 2)
-        );
+        const distance = getDistance(targetBase.location, unit.location);
         const unitinfo = unittypes[unit.unittype];
         const progress = unitinfo.speed * deltaTime;
         if (distance <= progress) {
@@ -305,29 +332,33 @@ function draw() {
     });
 
     if (isDragging && dragStartBase && dragLocation) {
-        context.beginPath();
-        context.strokeStyle = makeTranslucent(game_state.players[dragStartBase.ownerid].color, 0.5)
-        context.lineWidth = 5;
-        context.lineCap = 'round';
-        context.moveTo(dragStartBase.location.x, dragStartBase.location.y);
-        context.lineTo(dragLocation.x, dragLocation.y);
-        context.stroke();
+        selectedBases.forEach((baseid) => {
+            const base = game_state.bases[baseid];
+            // Draw line from start base to mouse location
+            context.beginPath();
+            context.strokeStyle = makeColorTranslucent(game_state.players[dragStartBase.ownerid].color, 0.5)
+            context.lineWidth = 5;
+            context.lineCap = 'round';
+            context.moveTo(base.location.x, base.location.y);
+            context.lineTo(dragLocation.x, dragLocation.y);
+            context.stroke();
 
-        // Draw arrowhead
-        const arrowheadSize = 10;
-        const angle = Math.atan2(dragLocation.y - dragStartBase.location.y, dragLocation.x - dragStartBase.location.x);
-        context.beginPath();
-        context.moveTo(dragLocation.x, dragLocation.y);
-        context.lineTo(
-            dragLocation.x - arrowheadSize * Math.cos(angle - Math.PI / 6),
-            dragLocation.y - arrowheadSize * Math.sin(angle - Math.PI / 6)
-        );
-        context.moveTo(dragLocation.x, dragLocation.y);
-        context.lineTo(
-            dragLocation.x - arrowheadSize * Math.cos(angle + Math.PI / 6),
-            dragLocation.y - arrowheadSize * Math.sin(angle + Math.PI / 6)
-        );
-        context.stroke();
+            // Draw arrowhead
+            const arrowheadSize = 10;
+            const angle = Math.atan2(dragLocation.y - base.location.y, dragLocation.x - base.location.x);
+            context.beginPath();
+            context.moveTo(dragLocation.x, dragLocation.y);
+            context.lineTo(
+                dragLocation.x - arrowheadSize * Math.cos(angle - Math.PI / 6),
+                dragLocation.y - arrowheadSize * Math.sin(angle - Math.PI / 6)
+            );
+            context.moveTo(dragLocation.x, dragLocation.y);
+            context.lineTo(
+                dragLocation.x - arrowheadSize * Math.cos(angle + Math.PI / 6),
+                dragLocation.y - arrowheadSize * Math.sin(angle + Math.PI / 6)
+            );
+            context.stroke();
+        });
     }
 }
 
@@ -342,6 +373,7 @@ function update() {
 
     if (deltaTime >= frame_time) {
         lastFrameTime = currentTime;
+        lastDeltaTime = deltaTime;
         updateState(deltaTime);
         draw();
     }
