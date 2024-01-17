@@ -140,8 +140,13 @@ function resetDragging() {
 
 function addPlayer(name) {
     const playerIndex = game_state.players.length;
-    game_state.players.push(players[playerIndex]);
-    game_state.players[playerIndex].name = name;
+    let player = players[playerIndex];
+    player.name = name;
+    game_state.players.push(player);
+    unowned_bases = game_state.bases.filter((base) => {
+        return base.ownerid < 0;
+    });
+    assignStartBase(getRandomElement(unowned_bases), player.id);
     return playerIndex;
 }
 
@@ -466,10 +471,6 @@ function startGame(is_host = true) {
     
     if (local_player == 0) {
         // Initialize game state
-        addPlayer('Player 1');
-        addPlayer('Player 2');
-        addAIPlayer('GERB')
-
         for (let i = 0; i < 50; i++) {
             const newBase = {
                 baseid: game_state.bases.length,
@@ -482,13 +483,8 @@ function startGame(is_host = true) {
             addBase(newBase);
         }
 
-        game_state.players.forEach((player) => {
-            unowned_bases = game_state.bases.filter((base) => {
-                return base.ownerid < 0;
-            });
-
-            assignStartBase(getRandomElement(unowned_bases), player.id);
-        });
+        addPlayer('Player 1');
+        addPlayer('Player 2');
 
         sendMessage_gameState();
     }

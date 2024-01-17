@@ -5,15 +5,20 @@
 
 const hostGameButton = document.getElementById('hostGameButton');
 const joinGameButton = document.getElementById('joinGameButton');
+const singlePlayerButton = document.getElementById('singlePlayerButton');
 
-// Add event listener for 'Host Game' button
 hostGameButton.addEventListener('click', () => {
     hostGame();
 });
 
-// Add event listener for 'Join Game' button
 joinGameButton.addEventListener('click', () => {
     joinGame(document.getElementById('joinCodeInput').value);
+});
+
+singlePlayerButton.addEventListener('click', () => {
+    switchStage('hostStage', 'gameStage');
+    startGame(true);
+    addAIPlayer('HERB');
 });
 
 // Switch between stages of the game (menu/game)
@@ -94,7 +99,9 @@ function setupConnection(connection, is_host) {
 }
 
 function sendMessage(message) {
-    conn.send(message);
+    if (conn) {
+        conn.send(message);
+    }
 }
 
 // Check URL for peer ID and automatically join the game
