@@ -79,23 +79,16 @@ function handleMouseMove(event) {
         const mouseY = event.clientY - canvas.offsetTop;
         dragLocation = { x: mouseX, y: mouseY };
 
-        if (hoveredBase) {
-            if (getDistance(hoveredBase.location, dragLocation) > baseRadius) {
-                hoveredBase = null;
-                hoveredTime = 0;
-            }
-            else {
-                hoveredTime += lastDeltaTime;
-                if (hoveredTime >= selectHoverTime && selectedBases.indexOf(hoveredBase.baseid) < 0) {
-                    selectedBases.push(hoveredBase.baseid);
-                }
-            }
+        if (!hoveredBase) {
+            hoveredBase = hoveredBase || game_state.bases.find((base) => {
+                if (base.ownerid != dragStartBase.ownerid) return false;
+                return getDistance(dragLocation, base.location) <= baseRadius;
+            });
+            hoveredTime = 0;
         }
-
-        hoveredBase = hoveredBase || game_state.bases.find((base) => {
-            if (base.ownerid != dragStartBase.ownerid) return false;
-            return getDistance(dragLocation, base.location) <= baseRadius;
-        });
+        else if (getDistance(hoveredBase.location, dragLocation) > baseRadius) {
+            hoveredBase = null;
+        }
     }
 }
 
@@ -288,6 +281,15 @@ function sendMessage_SendUnits(startBaseId, endBaseId, numUnits) {
 // ------ GAME TICK ------
 
 function updateState(deltaTime) {
+
+    if (hoveredBase) {
+        hoveredTime += deltaTime;
+        if (hoveredTime >= selectHoverTime && selectedBases.indexOf(hoveredBase.baseid) < 0) {
+            selectedBases.push(hoveredBase.baseid);
+            hoveredBase = null;
+        }
+    }
+
     game_state.bases.forEach((base) => {
         if (base.ownerid < 0 && base.units >= 10) return;
         base.units += base.trainingRate * deltaTime;
