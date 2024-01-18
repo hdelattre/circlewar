@@ -278,6 +278,33 @@ function sendMessage_SendUnits(startBaseId, endBaseId, numUnits) {
     sendMessage(message);
 }
 
+// ------ AI CONTROLLER ------
+
+function updateAI_greedyExpand(ai_player, ai_state) {
+    ai_state.playerBases.forEach((base) => {
+        if (base.units < 10) return;
+        const neutralBase = ai_state.neutralBases.length <= 0 ? null : ai_state.neutralBases.reduce((prev, curr) => {
+            if (ai_state.playerUnits.find((unit) => unit.targetid == curr.baseid)) return prev;
+            return prev.trainingRate > curr.trainingRate ? prev : curr;
+        });
+        const enemyBase = ai_state.enemyBases.length <= 0 ? null : ai_state.enemyBases.reduce((prev, curr) => {
+            if (ai_state.playerUnits.find((unit) => unit.targetid == curr.baseid)) return prev;
+            if (curr.units < base.units + 2 && prev.units > curr.units + 2) return curr;
+            return prev.trainingRate > curr.trainingRate ? prev : curr;
+        });
+        if (enemyBase && base.units >= (enemyBase.units + 15)) {
+            const sendUnitCount = Math.floor(base.units);
+            sendUnits(base, enemyBase, sendUnitCount);
+            sendMessage_SendUnits(base.baseid, enemyBase.baseid, sendUnitCount);
+        }
+        else if (neutralBase && base.units >= (neutralBase.units + 3)) {
+            const sendUnitCount = Math.floor(base.units);
+            sendUnits(base, neutralBase, sendUnitCount);
+            sendMessage_SendUnits(base.baseid, neutralBase.baseid, sendUnitCount);
+        }
+    });
+}
+
 // ------ GAME TICK ------
 
 function updateState(deltaTime) {
@@ -325,51 +352,35 @@ function updateState(deltaTime) {
 
     game_state.ai_players.forEach((playerid) => {
         const player = game_state.players[playerid];
-        let playerBases = [];
-        let enemyBases = [];
-        let neutralBases = [];
+        let ai_state = {
+            playerBases: [],
+            enemyBases: [],
+            neutralBases: [],
+            playerUnits: [],
+            enemyUnits: [],
+        }
+
         game_state.bases.forEach((base) => {
             if (base.ownerid == playerid) {
-                playerBases.push(base);
+                ai_state.playerBases.push(base);
             } else if (base.ownerid < 0) {
-                neutralBases.push(base);
+                ai_state.neutralBases.push(base);
             } else {
-                enemyBases.push(base);
+                ai_state.enemyBases.push(base);
             }
         });
 
-        let playerUnits = [];
-        let enemyUnits = [];
         game_state.units.forEach((unit) => {
             if (unit.ownerid == playerid) {
-                playerUnits.push(unit);
+                ai_state.playerUnits.push(unit);
             } else {
-                enemyUnits.push(unit);
+                ai_state.enemyUnits.push(unit);
             }
         });
 
-        playerBases.forEach((base) => {
-            if (base.units < 10) return;
-            const neutralBase = neutralBases.length <= 0 ? null : neutralBases.reduce((prev, curr) => {
-                if (playerUnits.find((unit) => unit.targetid == curr.baseid)) return prev;
-                return prev.trainingRate > curr.trainingRate ? prev : curr;
-            });
-            const enemyBase = enemyBases.length <= 0 ? null : enemyBases.reduce((prev, curr) => {
-                if (playerUnits.find((unit) => unit.targetid == curr.baseid)) return prev;
-                if (curr.units < base.units + 2 && prev.units > curr.units + 2) return curr;
-                return prev.trainingRate > curr.trainingRate ? prev : curr;
-            });
-            if (enemyBase && base.units >= (enemyBase.units + 15)) {
-                const sendUnitCount = Math.floor(base.units);
-                sendUnits(base, enemyBase, sendUnitCount);
-                sendMessage_SendUnits(base.baseid, enemyBase.baseid, sendUnitCount);
-            }
-            else if (neutralBase && base.units >= (neutralBase.units + 3)) {
-                const sendUnitCount = Math.floor(base.units);
-                sendUnits(base, neutralBase, sendUnitCount);
-                sendMessage_SendUnits(base.baseid, neutralBase.baseid, sendUnitCount);
-            }
-        });
+        aiUpdateFunction = updateAI_greedyExpand;
+
+        aiUpdateFunction(player, ai_state);
     });
 }
 
