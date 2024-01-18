@@ -527,13 +527,16 @@ function update() {
     requestAnimationFrame(update);
 }
 
-function startGame(is_host = true) {
+function startGame(is_host = true, game_options) {
 
     local_player = is_host? 0 : 1;
+
+    const num_bases = game_options.num_bases;
+    const num_ai = game_options.num_ai_players;
     
     if (local_player == 0) {
         // Initialize game state
-        for (let i = 0; i < 50; i++) {
+        for (let i = 0; i < num_bases; i++) {
             const newBase = {
                 baseid: game_state.bases.length,
                 ownerid: -1,
@@ -547,6 +550,11 @@ function startGame(is_host = true) {
 
         addPlayer('Player 1');
         addPlayer('Player 2');
+
+        const ai_names = [ 'HERB', 'ROSEMARY', 'THYME', 'SAGE', 'OREGANO', 'BASIL', 'MINT', 'PARSLEY', 'DILL', 'CHIVE' ];
+        for (let i = 0; i < num_ai; i++) {
+            addAIPlayer(ai_names[i]);
+        }
 
         sendMessage_gameState();
     }

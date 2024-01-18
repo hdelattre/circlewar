@@ -18,6 +18,15 @@
             </div>
             <p>or</p>
             <button id="singlePlayerButton">Single Player</button>
+            <div id="sliders">
+                <label for="numBasesSlider">Number of Bases:</label>
+                <input type="range" id="numBasesSlider" min="15" max="100" value="50">
+                <span id="numBasesValue">50</span>
+                <br>
+                <label for="numAIPlayersSlider">Number of AI Players:</label>
+                <input type="range" id="numAIPlayersSlider" min="0" max="6" value="1">
+                <span id="numAIPlayersValue">1</span>
+            </div>
         </div>
         <div id="pendingStage" style="display: none;">
             <p>Starting connection...</p>
@@ -29,7 +38,7 @@
             <p>Waiting for other player...</p>
         </div>
         <div id="gameStage" style="display: none;">
-            <canvas id="gameCanvas" width="800" height="600"></canvas>
+            <canvas id="gameCanvas" width="1000" height="800"></canvas>
         </div>
 	</div>
     <script defer src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>

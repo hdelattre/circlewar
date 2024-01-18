@@ -6,6 +6,17 @@
 const hostGameButton = document.getElementById('hostGameButton');
 const joinGameButton = document.getElementById('joinGameButton');
 const singlePlayerButton = document.getElementById('singlePlayerButton');
+const aiSlider = document.getElementById('numAIPlayersSlider');
+const aiSliderLabel = document.getElementById('numAIPlayersValue');
+const basesSlider = document.getElementById('numBasesSlider');
+const basesSliderLabel = document.getElementById('numBasesValue');
+
+aiSlider.oninput = () => {
+    aiSliderLabel.textContent = aiSlider.value;
+};
+basesSlider.oninput = () => {
+    basesSliderLabel.textContent = basesSlider.value;
+};
 
 hostGameButton.addEventListener('click', () => {
     hostGame();
@@ -17,11 +28,8 @@ joinGameButton.addEventListener('click', () => {
 
 singlePlayerButton.addEventListener('click', () => {
     switchStage('hostStage', 'gameStage');
-    startGame(true);
-    addAIPlayer('HERB');
-    addAIPlayer('ROSEMARY');
-    addAIPlayer('THYME');
-    addAIPlayer('SAGE');
+
+    startGame(true, getGameOptions());
 });
 
 // Switch between stages of the game (menu/game)
@@ -32,6 +40,15 @@ function switchStage(hideStageId, showStageId) {
     if (showStageId) {
         document.getElementById(showStageId).style.display = 'block';
     }
+}
+
+// ----- GAME -----
+
+function getGameOptions() {
+    return {
+        num_ai_players: aiSlider.value,
+        num_bases: basesSlider.value
+    };
 }
 
 // ----- CONNECTIONS -----
@@ -93,7 +110,7 @@ function setupConnection(connection, is_host) {
             handleMessage(data);
         });
 
-        startGame(is_host);
+        startGame(is_host, getGameOptions());
     });
 
     conn.on('error', () => {
