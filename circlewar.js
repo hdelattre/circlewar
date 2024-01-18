@@ -350,21 +350,29 @@ function updateState(deltaTime) {
     });
     game_state.units = newUnits;
 
+    let ownedBases = [];
+    let neutralBases = [];
+    game_state.bases.forEach((base) => {
+        if (base.ownerid < 0) {
+            neutralBases.push(base);
+        } else {
+            ownedBases.push(base);
+        }
+    });
+
     game_state.ai_players.forEach((playerid) => {
         const player = game_state.players[playerid];
         let ai_state = {
             playerBases: [],
             enemyBases: [],
-            neutralBases: [],
+            neutralBases: neutralBases,
             playerUnits: [],
             enemyUnits: [],
         }
 
-        game_state.bases.forEach((base) => {
+        ownedBases.forEach((base) => {
             if (base.ownerid == playerid) {
                 ai_state.playerBases.push(base);
-            } else if (base.ownerid < 0) {
-                ai_state.neutralBases.push(base);
             } else {
                 ai_state.enemyBases.push(base);
             }
