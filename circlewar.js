@@ -32,7 +32,7 @@ let game_state = {
     units: [],
 }
 
-let local_player = 1;
+let local_player = 0;
 
 let lastDeltaTime = 0;
 
@@ -114,6 +114,7 @@ function handleMouseUp(event) {
         
         if (dragStartBase && dragEndBase) {
             selectedBases.forEach((baseid) => {
+                if (game_state.bases[baseid].ownerid != dragStartBase.ownerid) return;
                 if (baseid == dragEndBase.baseid) return;
                 const base = game_state.bases[baseid];
                 const unitCount = Math.floor(base.units);
@@ -341,6 +342,16 @@ const aiUpdateFunctions = [ updateAI_greedyExpand, updateAI_zergRush ];
 function updateState(deltaTime) {
 
     game_state.time += deltaTime;
+
+    if (selectedBases.length > 0) {
+        let newSelectedBases = [];
+        selectedBases.forEach((baseid) => {
+            if (game_state.bases[baseid].ownerid == local_player) {
+                newSelectedBases.push(baseid);
+            }
+        });
+        selectedBases = newSelectedBases;
+    }
 
     if (hoveredBase) {
         hoveredTime += deltaTime;
