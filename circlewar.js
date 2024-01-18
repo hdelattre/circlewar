@@ -419,14 +419,17 @@ function updateState(deltaTime) {
             }
         });
 
-        if (game_state.time < 15 || (ai_state.playerBases.length <= 3 && ai_state.neutralBases.length > 0)) {
-            aiUpdateFunction = updateAI_greedyExpand;
-        }
-        else {
-            aiUpdateFunction = getRandomElement(aiUpdateFunctions);
-        }
+        // Update AI on host
+        if (local_player == 0) {
+            if (game_state.time < 15 || (ai_state.playerBases.length <= 3 && ai_state.neutralBases.length > 0)) {
+                aiUpdateFunction = updateAI_greedyExpand;
+            }
+            else {
+                aiUpdateFunction = getRandomElement(aiUpdateFunctions);
+            }
 
-        aiUpdateFunction(player, ai_state);
+            aiUpdateFunction(player, ai_state);
+        }
     });
 }
 
