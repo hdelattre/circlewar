@@ -29,7 +29,7 @@ joinGameButton.addEventListener('click', () => {
 singlePlayerButton.addEventListener('click', () => {
     switchStage('hostStage', 'gameStage');
 
-    startGame(true, getGameOptions());
+    startSinglePlayerGame();
 });
 
 // Switch between stages of the game (menu/game)
@@ -44,6 +44,12 @@ function switchStage(hideStageId, showStageId) {
 
 // ----- GAME -----
 
+let localPlayerId = null;
+
+function isHost() {
+    return localPlayerId == 0;
+}
+
 function getGameOptions() {
     return {
         num_ai_players: aiSlider.value,
@@ -51,12 +57,34 @@ function getGameOptions() {
     };
 }
 
+function getNumConnectedPlayers() {
+    return connectedPlayers.length + 1;
+}
+
+function startSinglePlayerGame() {
+    localPlayerId = 0;
+    startGame(getGameOptions());
+}
+
 // ----- CONNECTIONS -----
 
 let peer = null;
 let conn = null;
 
+let connectedPlayers = [];
+
+function registerConnectedPlayer(connection) {
+    const playerId = connectedPlayers.length + 1;
+    connectedPlayers.push({
+        connection: connection,
+        id: playerId,
+        name: 'Player ' + playerId
+    });
+    return playerId;
+}
+
 function hostGame() {
+    localPlayerId = 0;
     peer = new Peer(); // Create a new peer with a random ID
 
     peer.on('open', (id) => {
@@ -66,7 +94,6 @@ function hostGame() {
 
     peer.on('connection', (connection) => {
         setupConnection(connection, true);
-        switchStage('linkStage', 'gameStage');
     });
 
     switchStage('hostStage', 'pendingStage');
@@ -106,11 +133,23 @@ function setupConnection(connection, is_host) {
     conn.on('open', () => {
         console.log('Connected to: ' + conn.peer);
 
+        if (is_host) {
+            const playerId = registerConnectedPlayer(connection);
+            let controlId = null;
+            if (!isGameStarted()) {
+                switchStage('linkStage', 'gameStage');
+                startGame(getGameOptions());
+                controlId = playerId;
+            }
+            else {
+                controlId = addPlayer('Player ' + playerId);
+            }
+            sendMessage_startGame(playerId, controlId);
+        }
+
         conn.on('data', (data) => {
             handleMessage(data);
         });
-
-        startGame(is_host, getGameOptions());
     });
 
     conn.on('error', () => {

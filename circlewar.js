@@ -6,12 +6,13 @@ const canvas = document.getElementById('gameCanvas');
 const context = canvas.getContext('2d');
 
 // ------ GAME TYPES ------
+const UNIT_SOLDIER = 'soldier';
 const unittypes = {
-    'soldier': {
+    [UNIT_SOLDIER]: {
         speed: 100
     }
 };
-const players = [
+const playerSlots = [
     { id: 0, color: 'blue', name: 'Player 1' },
     { id: 1, color: 'red', name: 'Player 2' },
     { id: 2, color: 'green', name: 'Player 3' },
@@ -32,12 +33,12 @@ let game_state = {
     units: [],
 }
 
-let local_player = 0;
-
 let lastDeltaTime = 0;
 
 
 // ------ INPUT HANDLING ------
+
+let controlledPlayerId = null;
 
 canvas.addEventListener('mousedown', handleMouseDown);
 canvas.addEventListener('mousemove', handleMouseMove);
@@ -53,7 +54,7 @@ const selectHoverTime = 0.4;
 let selectedBases = [];
 
 function canDragBase(base) {
-    return base.ownerid == local_player;
+    return base.ownerid === controlledPlayerId;
 }
 
 function handleMouseDown(event) {
@@ -138,9 +139,41 @@ function resetDragging() {
 
 // ------ GAME FUNCTIONS ------
 
+function initGame(game_options) {
+    const num_bases = game_options.num_bases;
+    const num_ai = game_options.num_ai_players;
+    for (let i = 0; i < num_bases; i++) {
+        const newBase = {
+            baseid: game_state.bases.length,
+            ownerid: -1,
+            units: 10,
+            trainingRate: .2 + Math.random(),
+            unittype: UNIT_SOLDIER,
+            location: getRandomLocation(baseRadius + 10, game_state.bases)
+        };
+        addBase(newBase);
+    }
+
+    addPlayer('Host');
+
+    connectedPlayers.forEach((player) => {
+        addPlayer(player.name);
+    });
+
+    const ai_names = [ 'HERB', 'ROSEMARY', 'THYME', 'SAGE', 'OREGANO', 'BASIL', 'MINT', 'PARSLEY', 'DILL', 'CHIVE' ];
+    for (let i = 0; i < num_ai; i++) {
+        addAIPlayer(ai_names[i]);
+    }
+}
+
+function getNumActivePlayers() {
+    return game_state.players.length;
+}
+
 function addPlayer(name) {
     const playerIndex = game_state.players.length;
-    let player = players[playerIndex];
+    if (playerIndex >= playerSlots.length) return -1;
+    let player = playerSlots[playerIndex];
     player.name = name;
     game_state.players.push(player);
     unowned_bases = game_state.bases.filter((base) => {
@@ -258,36 +291,58 @@ function makeColorTranslucent(color, opacity) {
 
 // ------ NETWORKING ------
 
+const MESSAGE_GAMESTATE = 'gameState';
+const MESSAGE_STARTGAME = 'startGame';
+const MESSAGE_UNITSMOVED = 'unitsMoved';
+
 function handleMessage(message) {
     console.log(message);
     const messageType = message.type;
-    const messageData = message.data;
-    if (messageType == 'UnitsMoved') {
-        sendUnits(game_state.bases[messageData.baseid], game_state.bases[messageData.targetid], messageData.units)
+    const data = message.data;
+    if (messageType == MESSAGE_UNITSMOVED) {
+        sendUnits(game_state.bases[data.baseid], game_state.bases[data.targetid], data.units)
     }
-    else if (messageType == 'GameState') {
-        game_state = messageData;
+    else if (messageType == MESSAGE_GAMESTATE) {
+        game_state = data;
+    }
+    else if (messageType == MESSAGE_STARTGAME) {
+        game_state = data.game_state;
+        if (!isGameStarted()) {
+            localPlayerId = data.playerid;
+            controlledPlayerId = data.controlid;
+            console.log('Joined game as player ' + localPlayerId + ' with control over player ' + controlledPlayerId);
+            startGame(getGameOptions());
+        }
     }
 }
 
 function sendMessage_gameState() {
-    const message = {
-        type: 'GameState',
+    sendMessage({
+        type: MESSAGE_GAMESTATE,
         data: game_state
-    };
-    sendMessage(message);
+    });
 }
 
 function sendMessage_SendUnits(startBaseId, endBaseId, numUnits) {
-    const message = {
-        type: 'UnitsMoved',
+    sendMessage({
+        type: MESSAGE_UNITSMOVED,
         data: {
             baseid: startBaseId,
             targetid: endBaseId,
             units: numUnits,
         }
-    }
-    sendMessage(message);
+    });
+}
+
+function sendMessage_startGame(playerid, controlid) {
+    sendMessage({
+        type: MESSAGE_STARTGAME,
+        data: {
+            playerid: playerid,
+            controlid: controlid,
+            game_state: game_state,
+        }
+    });
 }
 
 // ------ AI CONTROLLER ------
@@ -346,7 +401,7 @@ function updateState(deltaTime) {
     if (selectedBases.length > 0) {
         let newSelectedBases = [];
         selectedBases.forEach((baseid) => {
-            if (game_state.bases[baseid].ownerid == local_player) {
+            if (game_state.bases[baseid].ownerid == controlledPlayerId) {
                 newSelectedBases.push(baseid);
             }
         });
@@ -431,7 +486,7 @@ function updateState(deltaTime) {
         });
 
         // Update AI on host
-        if (local_player == 0) {
+        if (isHost()) {
             if (game_state.time < 15 || (ai_state.playerBases.length <= 3 && ai_state.neutralBases.length > 0)) {
                 aiUpdateFunction = updateAI_greedyExpand;
             }
@@ -538,39 +593,17 @@ function update() {
     requestAnimationFrame(update);
 }
 
-function startGame(is_host = true, game_options) {
-
-    local_player = is_host? 0 : 1;
-
-    const num_bases = game_options.num_bases;
-    const num_ai = game_options.num_ai_players;
-    
-    if (local_player == 0) {
-        // Initialize game state
-        for (let i = 0; i < num_bases; i++) {
-            const newBase = {
-                baseid: game_state.bases.length,
-                ownerid: -1,
-                units: 10,
-                trainingRate: .2 + Math.random(),
-                unittype: 'soldier',
-                location: getRandomLocation(baseRadius + 10, game_state.bases)
-            };
-            addBase(newBase);
-        }
-
-        addPlayer('Player 1');
-        addPlayer('Player 2');
-
-        const ai_names = [ 'HERB', 'ROSEMARY', 'THYME', 'SAGE', 'OREGANO', 'BASIL', 'MINT', 'PARSLEY', 'DILL', 'CHIVE' ];
-        for (let i = 0; i < num_ai; i++) {
-            addAIPlayer(ai_names[i]);
-        }
-
-        sendMessage_gameState();
+function startGame(game_options) {
+    if (isHost()) {
+        controlledPlayerId = 0;
+        initGame(game_options);
     }
 
     // Start the game loop
     lastFrameTime = performance.now();
     update();
+}
+
+function isGameStarted() {
+    return lastFrameTime != null;
 }
