@@ -19,6 +19,9 @@ singlePlayerButton.addEventListener('click', () => {
     switchStage('hostStage', 'gameStage');
     startGame(true);
     addAIPlayer('HERB');
+    addAIPlayer('ROSEMARY');
+    addAIPlayer('THYME');
+    addAIPlayer('SAGE');
 });
 
 // Switch between stages of the game (menu/game)

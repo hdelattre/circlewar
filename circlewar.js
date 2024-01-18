@@ -14,12 +14,18 @@ const unittypes = {
 const players = [
     { id: 0, color: 'blue', name: 'Player 1' },
     { id: 1, color: 'red', name: 'Player 2' },
-    { id: 2, color: 'green', name: 'Player 3' }
+    { id: 2, color: 'green', name: 'Player 3' },
+    { id: 3, color: 'yellow', name: 'Player 4' },
+    { id: 4, color: 'purple', name: 'Player 5' },
+    { id: 5, color: 'orange', name: 'Player 6' },
+    { id: 6, color: 'pink', name: 'Player 7' },
+    { id: 7, color: 'brown', name: 'Player 8' },
 ];
 const baseRadius = 20;
 
 // ------ GAME STATE ------
 let game_state = {
+    time: 0,
     players: [],
     ai_players: [],
     bases: [],
@@ -236,9 +242,14 @@ function getRandomElement(arr) {
 
 function makeColorTranslucent(color, opacity) {
     const colors = {
-      red: '255, 0, 0',
-      green: '0, 128, 0',
-      blue: '0, 0, 255',
+        red: '255, 0, 0',
+        green: '0, 128, 0',
+        blue: '0, 0, 255',
+        yellow: '255, 255, 0',
+        purple: '128, 0, 128',
+        orange: '255, 165, 0',
+        pink: '255, 192, 203',
+        brown: '165, 42, 42',
     };
   
     return `rgba(${colors[color]}, ${opacity})`;
@@ -285,6 +296,7 @@ function updateAI_greedyExpand(ai_player, ai_state) {
         if (base.units < 10) return;
         const neutralBase = ai_state.neutralBases.length <= 0 ? null : ai_state.neutralBases.reduce((prev, curr) => {
             if (ai_state.playerUnits.find((unit) => unit.targetid == curr.baseid)) return prev;
+            if (ai_state.enemyUnits.find((unit) => unit.targetid == curr.baseid)) return prev;
             return prev.trainingRate > curr.trainingRate ? prev : curr;
         });
         const enemyBase = ai_state.enemyBases.length <= 0 ? null : ai_state.enemyBases.reduce((prev, curr) => {
@@ -305,9 +317,30 @@ function updateAI_greedyExpand(ai_player, ai_state) {
     });
 }
 
+function updateAI_zergRush(ai_player, ai_state) {
+    ai_state.playerBases.forEach((base) => {
+        // attacks the closest enemy base with less than 10 units
+        if (base.units < 6) return;
+        const enemyBase = ai_state.enemyBases.length <= 0 ? null : ai_state.enemyBases.reduce((prev, curr) => {
+            if (ai_state.playerUnits.find((unit) => unit.targetid == curr.baseid)) return prev;
+            if (curr.units < 10) return curr;
+            return prev.trainingRate > curr.trainingRate ? prev : curr;
+        });
+        if (enemyBase) {
+            const sendUnitCount = Math.floor(base.units);
+            sendUnits(base, enemyBase, sendUnitCount);
+            sendMessage_SendUnits(base.baseid, enemyBase.baseid, sendUnitCount);
+        }
+    });
+}
+
+const aiUpdateFunctions = [ updateAI_greedyExpand, updateAI_zergRush ];
+
 // ------ GAME TICK ------
 
 function updateState(deltaTime) {
+
+    game_state.time += deltaTime;
 
     if (hoveredBase) {
         hoveredTime += deltaTime;
@@ -386,7 +419,12 @@ function updateState(deltaTime) {
             }
         });
 
-        aiUpdateFunction = updateAI_greedyExpand;
+        if (game_state.time < 15 || (ai_state.playerBases.length <= 3 && ai_state.neutralBases.length > 0)) {
+            aiUpdateFunction = updateAI_greedyExpand;
+        }
+        else {
+            aiUpdateFunction = getRandomElement(aiUpdateFunctions);
+        }
 
         aiUpdateFunction(player, ai_state);
     });
