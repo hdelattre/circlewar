@@ -115,15 +115,20 @@ function joinGame(peerId) {
 function displayCopyLink(id, copy_full_url) {
     const copyLinkButton = document.getElementById('copyLinkButton');
     copyLinkButton.style.display = 'block';
-    copyLinkButton.textContent = copy_full_url ? 'Copy URL' : 'Copy Code';
+    function resetCopyLinkText() {
+        copyLinkButton.textContent = copy_full_url ? 'Copy URL' : 'Copy Code';
+    }
+    resetCopyLinkText();
     copyLinkButton.onclick = () => {
         const link = copy_full_url ? window.location.href + '?peerId=' + id : id;
         navigator.clipboard.writeText(link)
         .then(() => {
-            alert('Link copied to clipboard: ' + link);
+            copyLinkButton.textContent = 'Copied!';
+            setTimeout(resetCopyLinkText, 1500);
         })
         .catch(() => {
-            alert("something went wrong");
+            copyLinkButton.textContent = 'Error!';
+            setTimeout(resetCopyLinkText, 1500);
         });
     };
 }
