@@ -8,22 +8,24 @@
 </head>
 <body>
     <div id="app">
-        <h1>CircleWar</h1>
         <div id="hostStage">
+            <img id="logoimage" src="circlewar.png" alt="CircleWar"></img>
+            <br>
             <button id="hostGameButton">Host Game</button>
             <p>or</p>
             <div id="joinBox">
                 <input type="text" id="joinCodeInput" placeholder="Enter join code">
+                <br>
                 <button id="joinGameButton">Join Game</button>
             </div>
             <p>or</p>
             <button id="singlePlayerButton">Single Player</button>
             <div id="sliders">
-                <label for="numBasesSlider">Number of Bases:</label>
+                <label for="numBasesSlider">Bases:</label>
                 <input type="range" id="numBasesSlider" min="15" max="100" value="50">
                 <span id="numBasesValue">50</span>
                 <br>
-                <label for="numAIPlayersSlider">Number of AI Players:</label>
+                <label for="numAIPlayersSlider">AI Players:</label>
                 <input type="range" id="numAIPlayersSlider" min="0" max="7" value="1">
                 <span id="numAIPlayersValue">1</span>
             </div>

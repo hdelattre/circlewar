@@ -1,4 +1,3 @@
-
 body {
     font-family: Arial, sans-serif;
     display: flex;
@@ -6,10 +5,16 @@ body {
     align-items: center;
     height: 100vh;
     background-color: #f0f0f0;
+    margin: 0; /* Remove default margin */
 }
 
 #app {
     text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
 }
 
 #numberDisplay {
@@ -19,13 +24,52 @@ body {
 }
 
 button {
-    padding: 10px 20px;
+    padding: 15px 30px; /* Increase button size */
     font-size: 1em;
     cursor: pointer;
-    justify-content: center;
+    margin: 10px; /* Add some space around buttons */
+    border: none; /* Remove border */
+    background-color: #007bff; /* Bootstrap primary btn color for example */
+    color: white; /* Text color for buttons */
+    border-radius: 5px; /* Rounded corners for buttons */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2); /* subtle shadow for depth */
+    transition: background-color 0.3s; /* Smooth background color transition */
+}
+
+button:hover {
+    background-color: #0056b3; /* Darker shade on hover */
+}
+
+button:focus {
+    outline: none; /* Remove focus outline */
 }
 
 #gameCanvas {
     width: 100%;
-    height: 100%;
+    height: auto; /* Adjust height to maintain aspect ratio */
+}
+
+#logoimage {
+    width: 256px; /* Make logo larger */
+    height: auto; /* Adjust height to maintain aspect ratio */
+}
+
+input[type=range] {
+    width: 40%; /* Adjust width of sliders */
+    margin: 20px 0; /* Space above and below sliders */
+}
+
+#joinCodeInput {
+    padding: 10px; /* Add padding to the input */
+    font-size: 1em; /* Adjust font size */
+    border: 1px solid #ccc; /* Add a border */
+    border-radius: 5px; /* Add rounded corners */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2); /* Add a subtle shadow */
+    transition: border-color 0.3s, box-shadow 0.3s; /* Smooth transition for border and shadow */
+}
+
+#joinCodeInput:focus {
+    outline: none; /* Remove focus outline */
+    border-color: #007bff; /* Change border color on focus */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4); /* Increase shadow on focus */
 }
