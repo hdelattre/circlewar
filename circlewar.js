@@ -291,6 +291,16 @@ function makeColorTranslucent(color, opacity) {
 
 // ------ NETWORKING ------
 
+function updateGameState(new_game_state, timestamp) {
+    const serverDeltaTime = new_game_state.time - game_state.time;
+    game_state = new_game_state;
+    // Set time back to simulate forward from the new state
+    if (isGameStarted())
+    {
+        lastFrameTime -= serverDeltaTime;
+    }
+}
+
 const MESSAGE_GAMESTATE = 'gameState';
 const MESSAGE_STARTGAME = 'startGame';
 const MESSAGE_UNITSMOVED = 'unitsMoved';
@@ -303,10 +313,10 @@ function handleMessage(message) {
         sendUnits(game_state.bases[data.baseid], game_state.bases[data.targetid], data.units)
     }
     else if (messageType == MESSAGE_GAMESTATE) {
-        game_state = data;
+        updateGameState(data.game_state, data.time);
     }
     else if (messageType == MESSAGE_STARTGAME) {
-        game_state = data.game_state;
+        updateGameState(data.game_state, data.timestamp);
         if (!isGameStarted()) {
             localPlayerId = data.playerid;
             controlledPlayerId = data.controlid;
@@ -319,7 +329,10 @@ function handleMessage(message) {
 function sendMessage_gameState() {
     sendMessage({
         type: MESSAGE_GAMESTATE,
-        data: game_state
+        data: {
+            timestamp: lastFrameTime,
+            game_state: game_state,
+        }
     });
 }
 
@@ -340,6 +353,7 @@ function sendMessage_startGame(playerid, controlid) {
         data: {
             playerid: playerid,
             controlid: controlid,
+            timestamp: lastFrameTime,
             game_state: game_state,
         }
     });
@@ -578,6 +592,9 @@ function draw() {
 const frame_time = 1 / 60;
 let lastFrameTime = null;
 
+const stateUpdateInterval = 2;
+let nextStateUpdate = stateUpdateInterval;
+
 function update() {
     const currentTime = performance.now();
     const deltaTime = (currentTime - lastFrameTime) / 1000;
@@ -588,7 +605,15 @@ function update() {
         updateState(deltaTime);
         draw();
     }
-    
+
+    if (isHost()) {
+        nextStateUpdate -= deltaTime;
+        if (nextStateUpdate <= 0) {
+            nextStateUpdate = stateUpdateInterval;
+            sendMessage_gameState();
+        }
+    }
+
     // Call the update function again
     requestAnimationFrame(update);
 }
