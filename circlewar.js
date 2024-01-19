@@ -35,124 +35,6 @@ let game_state = {
 
 let lastDeltaTime = 0;
 
-
-// ------ INPUT HANDLING ------
-
-let controlledPlayerId = null;
-
-// Touch event handling
-canvas.addEventListener('touchstart', handleMouseDown, { passive: false });
-canvas.addEventListener('touchmove', handleMouseMove, { passive: false });
-canvas.addEventListener('touchend', handleMouseUp, { passive: false });
-
-canvas.addEventListener('mousedown', handleMouseDown);
-canvas.addEventListener('mousemove', handleMouseMove);
-canvas.addEventListener('mouseup', handleMouseUp);
-
-let isDragging = false;
-let dragStartBase = null;
-let dragLocation = null;
-let dragEndBase = null;
-let hoveredBase = null;
-let hoveredTime = 0;
-const selectMargin = 20;
-const selectHoverTime = 0.4;
-let selectedBases = [];
-
-function canDragBase(base) {
-    return base.ownerid === controlledPlayerId;
-}
-function getMouseLocation(event) {
-    const inputX = event.clientX || event.touches[0].clientX;
-    const inputY = event.clientY || event.touches[0].clientY;
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    const mouseX = (inputX - rect.left) * scaleX;
-    const mouseY = (inputY - rect.top) * scaleY;
-    return { x: mouseX, y: mouseY };
-}
-
-function getBaseSelectRadius(base) {
-    return baseRadius + selectMargin;
-}
-
-function handleMouseDown(event) {
-    event.preventDefault();
-    dragLocation = getMouseLocation(event);
-
-    const selectedBase = game_state.bases.find((base) => {
-        if (!canDragBase(base)) return false;
-        return getDistance(dragLocation, base.location) <= getBaseSelectRadius(base);
-    });
-
-    if (selectedBase) {
-        resetDragging();
-        dragStartBase = selectedBase;
-        isDragging = true;
-        selectedBases.push(dragStartBase.baseid);
-    }
-}
-
-function handleMouseMove(event) {
-    event.preventDefault();
-    if (isDragging) {
-        if (!canDragBase(dragStartBase)) {
-            isDragging = false;
-            return;
-        }
-
-        dragLocation = getMouseLocation(event);
-
-        if (!hoveredBase) {
-            hoveredBase = hoveredBase || game_state.bases.find((base) => {
-                if (base.ownerid != dragStartBase.ownerid) return false;
-                return getDistance(dragLocation, base.location) <= getBaseSelectRadius(base);
-            });
-            hoveredTime = 0;
-        }
-        else if (getDistance(hoveredBase.location, dragLocation) > getBaseSelectRadius(hoveredBase)) {
-            hoveredBase = null;
-        }
-    }
-}
-
-function handleMouseUp(event) {
-    event.preventDefault();
-    if (isDragging) {
-        if (!canDragBase(dragStartBase)) {
-            isDragging = false;
-            return;
-        }
-
-        dragEndBase = game_state.bases.find((base) => {
-            return getDistance(dragLocation, base.location) <= getBaseSelectRadius(base);
-        });
-        
-        if (dragStartBase && dragEndBase) {
-            selectedBases.forEach((baseid) => {
-                if (game_state.bases[baseid].ownerid != dragStartBase.ownerid) return;
-                if (baseid == dragEndBase.baseid) return;
-                const base = game_state.bases[baseid];
-                const unitCount = Math.floor(base.units);
-                sendUnits(base, dragEndBase, unitCount);
-                sendMessage_SendUnits(baseid, dragEndBase.baseid, unitCount);
-            });
-        }
-
-        isDragging = false;
-    }
-}
-
-function resetDragging() {
-    dragStartBase = null;
-    dragEndBase = null;
-    dragLocation = null;
-    hoveredBase = null;
-    hoveredTime = 0;
-    selectedBases = [];
-}
-
 // ------ GAME FUNCTIONS ------
 
 function initGame(game_options) {
@@ -290,6 +172,123 @@ function updateUnits(units, deltaTime, allow_capture = true) {
         }
     });
     return newUnits;
+}
+
+// ------ INPUT HANDLING ------
+
+let controlledPlayerId = null;
+
+// Touch event handling
+canvas.addEventListener('touchstart', handleMouseDown, { passive: false });
+canvas.addEventListener('touchmove', handleMouseMove, { passive: false });
+canvas.addEventListener('touchend', handleMouseUp, { passive: false });
+
+canvas.addEventListener('mousedown', handleMouseDown);
+canvas.addEventListener('mousemove', handleMouseMove);
+canvas.addEventListener('mouseup', handleMouseUp);
+
+let isDragging = false;
+let dragStartBase = null;
+let dragLocation = null;
+let dragEndBase = null;
+let hoveredBase = null;
+let hoveredTime = 0;
+const selectMargin = 20;
+const selectHoverTime = 0.4;
+let selectedBases = [];
+
+function canDragBase(base) {
+    return base.ownerid === controlledPlayerId;
+}
+function getMouseLocation(event) {
+    const inputX = event.clientX || event.touches[0].clientX;
+    const inputY = event.clientY || event.touches[0].clientY;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const mouseX = (inputX - rect.left) * scaleX;
+    const mouseY = (inputY - rect.top) * scaleY;
+    return { x: mouseX, y: mouseY };
+}
+
+function getBaseSelectRadius(base) {
+    return baseRadius + selectMargin;
+}
+
+function handleMouseDown(event) {
+    event.preventDefault();
+    dragLocation = getMouseLocation(event);
+
+    const selectedBase = game_state.bases.find((base) => {
+        if (!canDragBase(base)) return false;
+        return getDistance(dragLocation, base.location) <= getBaseSelectRadius(base);
+    });
+
+    if (selectedBase) {
+        resetDragging();
+        dragStartBase = selectedBase;
+        isDragging = true;
+        selectedBases.push(dragStartBase.baseid);
+    }
+}
+
+function handleMouseMove(event) {
+    event.preventDefault();
+    if (isDragging) {
+        if (!canDragBase(dragStartBase)) {
+            isDragging = false;
+            return;
+        }
+
+        dragLocation = getMouseLocation(event);
+
+        if (!hoveredBase) {
+            hoveredBase = hoveredBase || game_state.bases.find((base) => {
+                if (base.ownerid != dragStartBase.ownerid) return false;
+                return getDistance(dragLocation, base.location) <= getBaseSelectRadius(base);
+            });
+            hoveredTime = 0;
+        }
+        else if (getDistance(hoveredBase.location, dragLocation) > getBaseSelectRadius(hoveredBase)) {
+            hoveredBase = null;
+        }
+    }
+}
+
+function handleMouseUp(event) {
+    event.preventDefault();
+    if (isDragging) {
+        if (!canDragBase(dragStartBase)) {
+            isDragging = false;
+            return;
+        }
+
+        dragEndBase = game_state.bases.find((base) => {
+            return getDistance(dragLocation, base.location) <= getBaseSelectRadius(base);
+        });
+        
+        if (dragStartBase && dragEndBase) {
+            selectedBases.forEach((baseid) => {
+                if (game_state.bases[baseid].ownerid != dragStartBase.ownerid) return;
+                if (baseid == dragEndBase.baseid) return;
+                const base = game_state.bases[baseid];
+                const unitCount = Math.floor(base.units);
+                sendUnits(base, dragEndBase, unitCount);
+                sendMessage_SendUnits(baseid, dragEndBase.baseid, unitCount);
+            });
+        }
+
+        isDragging = false;
+    }
+}
+
+function resetDragging() {
+    dragStartBase = null;
+    dragEndBase = null;
+    dragLocation = null;
+    hoveredBase = null;
+    hoveredTime = 0;
+    selectedBases = [];
 }
 
 // ------ UTILITY FUNCTIONS ------
