@@ -423,6 +423,22 @@ function updateAI_greedyExpand(ai_player, ai_state) {
             if (ai_state.enemyUnits.find((unit) => unit.targetid == curr.baseid)) return prev;
             return prev.trainingRate > curr.trainingRate ? prev : curr;
         });
+        if (neutralBase && base.units >= (neutralBase.units + 3)) {
+            const sendUnitCount = Math.floor(base.units);
+            sendUnits(base, neutralBase, sendUnitCount);
+            sendMessage_SendUnits(base.baseid, neutralBase.baseid, sendUnitCount);
+        }
+    });
+}
+
+function updateAI_attackExpand(ai_player, ai_state) {
+    ai_state.playerBases.forEach((base) => {
+        if (base.units < 10) return;
+        const neutralBase = ai_state.neutralBases.length <= 0 ? null : ai_state.neutralBases.reduce((prev, curr) => {
+            if (ai_state.playerUnits.find((unit) => unit.targetid == curr.baseid)) return prev;
+            if (ai_state.enemyUnits.find((unit) => unit.targetid == curr.baseid)) return prev;
+            return prev.trainingRate > curr.trainingRate ? prev : curr;
+        });
         const enemyBase = ai_state.enemyBases.length <= 0 ? null : ai_state.enemyBases.reduce((prev, curr) => {
             if (ai_state.playerUnits.find((unit) => unit.targetid == curr.baseid)) return prev;
             if (curr.units < base.units + 2 && prev.units > curr.units + 2) return curr;
@@ -458,7 +474,7 @@ function updateAI_zergRush(ai_player, ai_state) {
     });
 }
 
-const aiUpdateFunctions = [ updateAI_greedyExpand, updateAI_zergRush ];
+const aiUpdateFunctions = [ updateAI_attackExpand, updateAI_greedyExpand, updateAI_zergRush ];
 
 // ------ GAME TICK ------
 
