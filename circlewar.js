@@ -218,6 +218,8 @@ function sendUnits(startBase, endBase, numUnits) {
     const startX = startBase.location.x - formationWidth / 2;
     const startY = startBase.location.y - formationHeight / 2;
 
+    let spawnedUnits = [];
+
     // Iterate over each unit in the hexagon formation
     for (let row = 0; row < numRows; row++) {
         for (let col = 0; col < numCols; col++) {
@@ -230,14 +232,50 @@ function sendUnits(startBase, endBase, numUnits) {
             const unitX = startX + col * unitSpacing;
             const unitY = startY + row * unitSpacing * Math.sqrt(3) / 2;
 
-            game_state.units.push({
+            const unit = {
                 ownerid: startBase.ownerid,
                 location: { x: unitX, y: unitY },
                 unittype: startBase.unittype,
                 targetid: endBase.baseid
-            });
+            };
+            spawnedUnits.push(unit);
+            game_state.units.push(unit);
         }
     }
+
+    return spawnedUnits;
+}
+
+function updateUnits(units, deltaTime, allow_capture = true) {
+    const newUnits = [];
+    units.forEach((unit) => {
+        const targetBase = game_state.bases[unit.targetid];
+        const distance = getDistance(targetBase.location, unit.location);
+        const unitinfo = unittypes[unit.unittype];
+        const progress = unitinfo.speed * deltaTime;
+        if (distance <= progress) {
+            unit.location = targetBase.location;
+            if (allow_capture) {
+                if (targetBase.ownerid == unit.ownerid) {
+                    targetBase.units += 1;
+                } else {
+                    targetBase.units -= 1;
+                    if (targetBase.units < 0) {
+                        targetBase.units = -targetBase.units;
+                        targetBase.ownerid = unit.ownerid;
+                    }
+                }
+            }
+        } else {
+            const dx = targetBase.location.x - unit.location.x;
+            const dy = targetBase.location.y - unit.location.y;
+            const angle = Math.atan2(dy, dx);
+            unit.location.x += Math.cos(angle) * progress;
+            unit.location.y += Math.sin(angle) * progress;
+            newUnits.push(unit);
+        }
+    });
+    return newUnits;
 }
 
 // ------ UTILITY FUNCTIONS ------
@@ -293,7 +331,7 @@ function makeColorTranslucent(color, opacity) {
 
 // ------ NETWORKING ------
 
-function updateGameState(new_game_state, timestamp) {
+function updateGameState(new_game_state) {
     const serverDeltaTime = new_game_state.time - game_state.time;
     game_state = new_game_state;
     // Set time back to simulate forward from the new state
@@ -312,13 +350,14 @@ function handleMessage(message) {
     const messageType = message.type;
     const data = message.data;
     if (messageType == MESSAGE_UNITSMOVED) {
-        sendUnits(game_state.bases[data.baseid], game_state.bases[data.targetid], data.units)
+        const sentUnits = sendUnits(game_state.bases[data.baseid], game_state.bases[data.targetid], data.units)
+        updateUnits(sentUnits, game_state.time - data.time, false)
     }
     else if (messageType == MESSAGE_GAMESTATE) {
-        updateGameState(data.game_state, data.time);
+        updateGameState(data.game_state);
     }
     else if (messageType == MESSAGE_STARTGAME) {
-        updateGameState(data.game_state, data.timestamp);
+        updateGameState(data.game_state);
         if (!isGameStarted()) {
             localPlayerId = data.playerid;
             controlledPlayerId = data.controlid;
@@ -332,7 +371,6 @@ function sendMessage_gameState() {
     sendMessage({
         type: MESSAGE_GAMESTATE,
         data: {
-            timestamp: lastFrameTime,
             game_state: game_state,
         }
     });
@@ -342,6 +380,7 @@ function sendMessage_SendUnits(startBaseId, endBaseId, numUnits) {
     sendMessage({
         type: MESSAGE_UNITSMOVED,
         data: {
+            time: game_state.time,
             baseid: startBaseId,
             targetid: endBaseId,
             units: numUnits,
@@ -355,7 +394,6 @@ function sendMessage_startGame(playerid, controlid) {
         data: {
             playerid: playerid,
             controlid: controlid,
-            timestamp: lastFrameTime,
             game_state: game_state,
         }
     });
@@ -437,32 +475,7 @@ function updateState(deltaTime) {
         base.units += base.trainingRate * deltaTime;
     });
 
-    const newUnits = [];
-    game_state.units.forEach((unit) => {
-        const targetBase = game_state.bases[unit.targetid];
-        const distance = getDistance(targetBase.location, unit.location);
-        const unitinfo = unittypes[unit.unittype];
-        const progress = unitinfo.speed * deltaTime;
-        if (distance <= progress) {
-            unit.location = targetBase.location;
-            if (targetBase.ownerid == unit.ownerid) {
-                targetBase.units += 1;
-            } else {
-                targetBase.units -= 1;
-                if (targetBase.units < 0) {
-                    targetBase.units = -targetBase.units;
-                    targetBase.ownerid = unit.ownerid;
-                }
-            }
-        } else {
-            const dx = targetBase.location.x - unit.location.x;
-            const dy = targetBase.location.y - unit.location.y;
-            const angle = Math.atan2(dy, dx);
-            unit.location.x += Math.cos(angle) * progress;
-            unit.location.y += Math.sin(angle) * progress;
-            newUnits.push(unit);
-        }
-    });
+    const newUnits = updateUnits(game_state.units, deltaTime);
     game_state.units = newUnits;
 
     let ownedBases = [];
@@ -594,7 +607,7 @@ function draw() {
 const frame_time = 1 / 60;
 let lastFrameTime = null;
 
-const stateUpdateInterval = 2;
+const stateUpdateInterval = 5;
 let nextStateUpdate = stateUpdateInterval;
 
 function update() {
