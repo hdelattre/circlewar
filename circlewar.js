@@ -56,11 +56,13 @@ let selectedBases = [];
 function canDragBase(base) {
     return base.ownerid === controlledPlayerId;
 }
-
 function getMouseLocation(event) {
-    const mouseX = event.clientX || event.touches[0].clientX;
-    const mouseY = event.clientY || event.touches[0].clientY;
-    return { x: mouseX - canvas.offsetLeft, y: mouseY - canvas.offsetTop };
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const mouseX = (event.clientX - rect.left) * scaleX;
+    const mouseY = (event.clientY - rect.top) * scaleY;
+    return { x: mouseX, y: mouseY };
 }
 
 function handleMouseDown(event) {
@@ -107,9 +109,7 @@ function handleMouseUp(event) {
             isDragging = false;
             return;
         }
-        const mouseX = event.clientX - canvas.offsetLeft;
-        const mouseY = event.clientY - canvas.offsetTop;
-        dragLocation = { x: mouseX, y: mouseY };
+        dragLocation = getMouseLocation(event);
 
         dragEndBase = game_state.bases.find((base) => {
             return getDistance(dragLocation, base.location) <= baseRadius;
