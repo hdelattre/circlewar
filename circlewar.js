@@ -55,6 +55,7 @@ let dragLocation = null;
 let dragEndBase = null;
 let hoveredBase = null;
 let hoveredTime = 0;
+const selectMargin = 20;
 const selectHoverTime = 0.4;
 let selectedBases = [];
 
@@ -72,13 +73,17 @@ function getMouseLocation(event) {
     return { x: mouseX, y: mouseY };
 }
 
+function getBaseSelectRadius(base) {
+    return baseRadius + selectMargin;
+}
+
 function handleMouseDown(event) {
     event.preventDefault();
     dragLocation = getMouseLocation(event);
 
     const selectedBase = game_state.bases.find((base) => {
         if (!canDragBase(base)) return false;
-        return getDistance(dragLocation, base.location) <= baseRadius;
+        return getDistance(dragLocation, base.location) <= getBaseSelectRadius(base);
     });
 
     if (selectedBase) {
@@ -102,11 +107,11 @@ function handleMouseMove(event) {
         if (!hoveredBase) {
             hoveredBase = hoveredBase || game_state.bases.find((base) => {
                 if (base.ownerid != dragStartBase.ownerid) return false;
-                return getDistance(dragLocation, base.location) <= baseRadius;
+                return getDistance(dragLocation, base.location) <= getBaseSelectRadius(base);
             });
             hoveredTime = 0;
         }
-        else if (getDistance(hoveredBase.location, dragLocation) > baseRadius) {
+        else if (getDistance(hoveredBase.location, dragLocation) > getBaseSelectRadius(hoveredBase)) {
             hoveredBase = null;
         }
     }
@@ -121,7 +126,7 @@ function handleMouseUp(event) {
         }
 
         dragEndBase = game_state.bases.find((base) => {
-            return getDistance(dragLocation, base.location) <= baseRadius;
+            return getDistance(dragLocation, base.location) <= getBaseSelectRadius(base);
         });
         
         if (dragStartBase && dragEndBase) {
