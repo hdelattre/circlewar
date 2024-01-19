@@ -611,6 +611,7 @@ const stateUpdateInterval = 5;
 let nextStateUpdate = stateUpdateInterval;
 
 function update() {
+    if (lastFrameTime == null) return;
     const currentTime = performance.now();
     const deltaTime = (currentTime - lastFrameTime) / 1000;
 
@@ -633,6 +634,10 @@ function update() {
     requestAnimationFrame(update);
 }
 
+function isGameStarted() {
+    return lastFrameTime != null;
+}
+
 function startGame(game_options) {
     if (isHost()) {
         controlledPlayerId = 0;
@@ -644,6 +649,6 @@ function startGame(game_options) {
     update();
 }
 
-function isGameStarted() {
-    return lastFrameTime != null;
+function stopGame() {
+    lastFrameTime = null;
 }

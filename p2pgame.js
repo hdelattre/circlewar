@@ -108,7 +108,7 @@ function joinGame(peerId) {
         setupConnection(hostConnection, false);
     });
 
-    switchStage('hostStage', 'gameStage');
+    switchStage('hostStage', 'pendingStage');
 }
 
 // Display copy link button and setup click event
@@ -151,8 +151,21 @@ function displayCopyLink(id) {
 
 // Set up the connection events
 function setupConnection(connection, is_host) {
+
+    let connectionTimeout = null;
+    if (!is_host) {
+        connectionTimeout = setTimeout(() => {
+            switchStage('pendingStage', 'hostStage');
+        }, 5000);
+    }
+
     connection.on('open', () => {
         console.log('Connected to: ' + connection.peer);
+
+        if (!is_host) {
+            clearTimeout(connectionTimeout);
+            switchStage('pendingStage', 'gameStage');
+        }
 
         if (is_host) {
             const playerId = registerConnectedPlayer(connection);
@@ -182,6 +195,10 @@ function setupConnection(connection, is_host) {
 
     connection.on('error', () => {
         console.log('Connection error: ');
+        if (!isHost()) {
+            stopGame();
+            switchStage('gameStage', 'hostStage');
+        }
     });
 }
 
