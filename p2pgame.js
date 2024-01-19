@@ -88,7 +88,7 @@ function hostGame() {
     peer = new Peer(); // Create a new peer with a random ID
 
     peer.on('open', (id) => {
-        displayCopyLink(id, false);
+        displayCopyLink(id);
         switchStage('pendingStage', 'linkStage');
     });
 
@@ -112,25 +112,41 @@ function joinGame(peerId) {
 }
 
 // Display copy link button and setup click event
-function displayCopyLink(id, copy_full_url) {
-    const copyLinkButton = document.getElementById('copyLinkButton');
-    copyLinkButton.style.display = 'block';
+function displayCopyLink(id) {
+    const copyCodeButton = document.getElementById('copyCodeButton');
+    const copyURLButton = document.getElementById('copyUrlButton');
+    const textTimeout = 1500;
     function resetCopyLinkText() {
-        copyLinkButton.textContent = copy_full_url ? 'Copy URL' : 'Copy Code';
+        copyCodeButton.textContent = 'Copy Code';
+    }
+    function resetCopyURLText() {
+        copyURLButton.textContent = 'Copy URL';
     }
     resetCopyLinkText();
-    copyLinkButton.onclick = () => {
-        const link = copy_full_url ? window.location.href + '?peerId=' + id : id;
-        navigator.clipboard.writeText(link)
+    resetCopyURLText();
+    copyCodeButton.onclick = () => {
+        navigator.clipboard.writeText(id)
         .then(() => {
-            copyLinkButton.textContent = 'Copied!';
-            setTimeout(resetCopyLinkText, 1500);
+            copyCodeButton.textContent = 'Copied!';
+            setTimeout(resetCopyLinkText, textTimeout);
         })
         .catch(() => {
-            copyLinkButton.textContent = 'Error!';
-            setTimeout(resetCopyLinkText, 1500);
+            copyCodeButton.textContent = 'Error!';
+            setTimeout(resetCopyLinkText, textTimeout);
         });
     };
+    copyURLButton.onclick = () => {
+        const url = window.location.href + '?peerId=' + id;
+        navigator.clipboard.writeText(url)
+        .then(() => {
+            copyURLButton.textContent = 'Copied!';
+            setTimeout(resetCopyURLText, textTimeout);
+        })
+        .catch(() => {
+            copyURLButton.textContent = 'Error!';
+            setTimeout(resetCopyURLText, textTimeout);
+        });
+    }
 }
 
 // Set up the connection events
