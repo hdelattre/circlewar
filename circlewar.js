@@ -459,34 +459,34 @@ function updateState(deltaTime) {
         }
     });
 
-    game_state.ai_players.forEach((playerid) => {
-        const player = game_state.players[playerid];
-        let ai_state = {
-            playerBases: [],
-            enemyBases: [],
-            neutralBases: neutralBases,
-            playerUnits: [],
-            enemyUnits: [],
-        }
-
-        ownedBases.forEach((base) => {
-            if (base.ownerid == playerid) {
-                ai_state.playerBases.push(base);
-            } else {
-                ai_state.enemyBases.push(base);
+    // Update AI on host
+    if (isHost() && game_state.time >= 3) {
+        game_state.ai_players.forEach((playerid) => {
+            const player = game_state.players[playerid];
+            let ai_state = {
+                playerBases: [],
+                enemyBases: [],
+                neutralBases: neutralBases,
+                playerUnits: [],
+                enemyUnits: [],
             }
-        });
 
-        game_state.units.forEach((unit) => {
-            if (unit.ownerid == playerid) {
-                ai_state.playerUnits.push(unit);
-            } else {
-                ai_state.enemyUnits.push(unit);
-            }
-        });
+            ownedBases.forEach((base) => {
+                if (base.ownerid == playerid) {
+                    ai_state.playerBases.push(base);
+                } else {
+                    ai_state.enemyBases.push(base);
+                }
+            });
 
-        // Update AI on host
-        if (isHost()) {
+            game_state.units.forEach((unit) => {
+                if (unit.ownerid == playerid) {
+                    ai_state.playerUnits.push(unit);
+                } else {
+                    ai_state.enemyUnits.push(unit);
+                }
+            });
+
             if (game_state.time < 15 || (ai_state.playerBases.length <= 3 && ai_state.neutralBases.length > 0)) {
                 aiUpdateFunction = updateAI_greedyExpand;
             }
@@ -495,8 +495,8 @@ function updateState(deltaTime) {
             }
 
             aiUpdateFunction(player, ai_state);
-        }
-    });
+        });
+    }
 }
 
 // ------ RENDERING ------
