@@ -24,3 +24,8 @@ button {
     cursor: pointer;
     justify-content: center;
 }
+
+#gameCanvas {
+    width: 100%;
+    height: 100%;
+}
