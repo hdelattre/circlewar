@@ -40,6 +40,11 @@ let lastDeltaTime = 0;
 
 let controlledPlayerId = null;
 
+// Touch event handling
+canvas.addEventListener('touchstart', handleMouseDown, { passive: false });
+canvas.addEventListener('touchmove', handleMouseMove, { passive: false });
+canvas.addEventListener('touchend', handleMouseUp, { passive: false });
+
 canvas.addEventListener('mousedown', handleMouseDown);
 canvas.addEventListener('mousemove', handleMouseMove);
 canvas.addEventListener('mouseup', handleMouseUp);
@@ -57,15 +62,18 @@ function canDragBase(base) {
     return base.ownerid === controlledPlayerId;
 }
 function getMouseLocation(event) {
+    const inputX = event.clientX || event.touches[0].clientX;
+    const inputY = event.clientY || event.touches[0].clientY;
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
-    const mouseX = (event.clientX - rect.left) * scaleX;
-    const mouseY = (event.clientY - rect.top) * scaleY;
+    const mouseX = (inputX - rect.left) * scaleX;
+    const mouseY = (inputY - rect.top) * scaleY;
     return { x: mouseX, y: mouseY };
 }
 
 function handleMouseDown(event) {
+    event.preventDefault();
     dragLocation = getMouseLocation(event);
 
     const selectedBase = game_state.bases.find((base) => {
@@ -82,6 +90,7 @@ function handleMouseDown(event) {
 }
 
 function handleMouseMove(event) {
+    event.preventDefault();
     if (isDragging) {
         if (!canDragBase(dragStartBase)) {
             isDragging = false;
@@ -104,12 +113,12 @@ function handleMouseMove(event) {
 }
 
 function handleMouseUp(event) {
+    event.preventDefault();
     if (isDragging) {
         if (!canDragBase(dragStartBase)) {
             isDragging = false;
             return;
         }
-        dragLocation = getMouseLocation(event);
 
         dragEndBase = game_state.bases.find((base) => {
             return getDistance(dragLocation, base.location) <= baseRadius;
