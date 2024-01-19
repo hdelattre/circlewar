@@ -57,10 +57,14 @@ function canDragBase(base) {
     return base.ownerid === controlledPlayerId;
 }
 
+function getMouseLocation(event) {
+    const mouseX = event.clientX || event.touches[0].clientX;
+    const mouseY = event.clientY || event.touches[0].clientY;
+    return { x: mouseX - canvas.offsetLeft, y: mouseY - canvas.offsetTop };
+}
+
 function handleMouseDown(event) {
-    const mouseX = event.clientX - canvas.offsetLeft;
-    const mouseY = event.clientY - canvas.offsetTop;
-    dragLocation = { x: mouseX, y: mouseY };
+    dragLocation = getMouseLocation(event);
 
     const selectedBase = game_state.bases.find((base) => {
         if (!canDragBase(base)) return false;
@@ -82,9 +86,7 @@ function handleMouseMove(event) {
             return;
         }
 
-        const mouseX = event.clientX - canvas.offsetLeft;
-        const mouseY = event.clientY - canvas.offsetTop;
-        dragLocation = { x: mouseX, y: mouseY };
+        dragLocation = getMouseLocation(event);
 
         if (!hoveredBase) {
             hoveredBase = hoveredBase || game_state.bases.find((base) => {
