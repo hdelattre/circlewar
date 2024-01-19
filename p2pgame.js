@@ -69,8 +69,8 @@ function startSinglePlayerGame() {
 // ----- CONNECTIONS -----
 
 let peer = null;
-let conn = null;
-
+let hostConnection = null;
+let connections = [];
 let connectedPlayers = [];
 
 function registerConnectedPlayer(connection) {
@@ -93,6 +93,7 @@ function hostGame() {
     });
 
     peer.on('connection', (connection) => {
+        connections.push(connection);
         setupConnection(connection, true);
     });
 
@@ -103,8 +104,8 @@ function joinGame(peerId) {
     peer = new Peer();
 
     peer.on('open', () => {
-        conn = peer.connect(peerId);
-        setupConnection(conn, false);
+        hostConnection = peer.connect(peerId);
+        setupConnection(hostConnection, false);
     });
 
     switchStage('hostStage', 'gameStage');
@@ -129,9 +130,8 @@ function displayCopyLink(id, copy_full_url) {
 
 // Set up the connection events
 function setupConnection(connection, is_host) {
-    conn = connection;
-    conn.on('open', () => {
-        console.log('Connected to: ' + conn.peer);
+    connection.on('open', () => {
+        console.log('Connected to: ' + connection.peer);
 
         if (is_host) {
             const playerId = registerConnectedPlayer(connection);
@@ -147,19 +147,31 @@ function setupConnection(connection, is_host) {
             sendMessage_startGame(playerId, controlId);
         }
 
-        conn.on('data', (data) => {
+        connection.on('data', (data) => {
+            if (isHost()) {
+                connections.forEach((clientConnection) => {
+                    if (clientConnection != connection) {
+                        clientConnection.send(data);
+                    }
+                });
+            }
             handleMessage(data);
         });
     });
 
-    conn.on('error', () => {
+    connection.on('error', () => {
         console.log('Connection error: ');
     });
 }
 
 function sendMessage(message) {
-    if (conn) {
-        conn.send(message);
+    if (hostConnection) {
+        hostConnection.send(message);
+    }
+    else {
+        connections.forEach((connection) => {
+            connection.send(message);
+        });
     }
 }
 
