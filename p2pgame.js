@@ -129,7 +129,11 @@ function joinGame(peerId) {
     switchStage('hostStage', 'pendingStage');
 }
 
-function gameOver(winnerId) {
+function gameOver(winnerId, winnerName, winnerColor) {
+    const gameOverText = document.getElementById('gameOverText');
+    const capitalizedColor = winnerColor.charAt(0).toUpperCase() + winnerColor.slice(1);
+    gameOverText.textContent = capitalizedColor + ' Wins!';
+    gameOverText.style.color = winnerColor;
     switchStage('gameStage', 'gameOverStage');
     endCreditsAudio.volume = 0.2;
     endCreditsAudio.loop = true;

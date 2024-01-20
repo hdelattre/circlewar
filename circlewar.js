@@ -749,8 +749,9 @@ function updateState(deltaTime) {
         }
         if (winner != null) {
             stopGame();
+            const winning_player = game_state.players[winner];
             console.log('Player ' + winner + ' wins!');
-            gameOver(winner);
+            gameOver(winner, winning_player.name, winning_player.color);
         }
     }
 }
