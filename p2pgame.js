@@ -14,6 +14,7 @@ const gameSpeedSlider = document.getElementById('gameSpeedSlider');
 const gameSpeedLabel = document.getElementById('gameSpeedValue');
 const roadsCheckbox = document.getElementById('roadsCheckbox');
 const playAgainButton = document.getElementById('playAgainButton');
+const endCreditsAudio = document.getElementById('endCreditsAudio');
 
 aiSlider.oninput = () => {
     aiSliderLabel.textContent = aiSlider.value;
@@ -44,6 +45,7 @@ singlePlayerButton.addEventListener('click', () => {
 
 playAgainButton.addEventListener('click', () => {
     switchStage('gameOverStage', 'hostStage');
+    endCreditsAudio.pause();
 });
 
 // Switch between stages of the game (menu/game)
@@ -129,6 +131,9 @@ function joinGame(peerId) {
 
 function gameOver(winnerId) {
     switchStage('gameStage', 'gameOverStage');
+    endCreditsAudio.volume = 0.2;
+    endCreditsAudio.loop = true;
+    endCreditsAudio.play();
 }
 
 // Display copy link button and setup click event
