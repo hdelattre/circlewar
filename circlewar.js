@@ -557,9 +557,11 @@ function updateAI_reinforceBases(ai_player, ai_state, deltaTime) {
     }
 }
 
+// expands to the closest neutral base
 function updateAI_greedyExpand(ai_player, ai_state, deltaTime) {
-    ai_state.playerBases.forEach((base) => {
-        if (base.units < 10) return;
+    for (i = 0, n = ai_state.playerBases.length; i < n; i++) {
+        const base = ai_state.playerBases[i];
+        if (base.units < 10) continue;
         const neutralBase = ai_state.neutralBases.length <= 0 ? null : ai_state.neutralBases.reduce((prev, curr) => {
             if (!canSendUnits(base.baseid, curr.baseid)) return prev;
             if (ai_state.playerUnits.find((unit) => unit.targetid == curr.baseid)) return prev;
@@ -569,13 +571,16 @@ function updateAI_greedyExpand(ai_player, ai_state, deltaTime) {
         if (neutralBase && base.units >= (neutralBase.units + 3)) {
             const sendUnitCount = Math.floor(base.units);
             input_sendUnits(ai_player.id, base.baseid, neutralBase.baseid, sendUnitCount);
+            return;
         }
-    });
+    }
 }
 
+// attacks vulnerable enemy bases if possible, else expands
 function updateAI_attackExpand(ai_player, ai_state, deltaTime) {
-    ai_state.playerBases.forEach((base) => {
-        if (base.units < 10) return;
+    for (i = 0, n = ai_state.playerBases.length; i < n; i++) {
+        const base = ai_state.playerBases[i];
+        if (base.units < 10) continue;
         const neutralBase = ai_state.neutralBases.length <= 0 ? null : ai_state.neutralBases.reduce((prev, curr) => {
             if (!canSendUnits(base.baseid, curr.baseid)) return prev;
             if (ai_state.playerUnits.find((unit) => unit.targetid == curr.baseid)) return prev;
@@ -591,18 +596,21 @@ function updateAI_attackExpand(ai_player, ai_state, deltaTime) {
         if (enemyBase && base.units >= (enemyBase.units + 15)) {
             const sendUnitCount = Math.floor(base.units);
             input_sendUnits(ai_player.id, base.baseid, enemyBase.baseid, sendUnitCount);
+            return;
         }
         else if (neutralBase && base.units >= (neutralBase.units + 3)) {
             const sendUnitCount = Math.floor(base.units);
             input_sendUnits(ai_player.id, base.baseid, neutralBase.baseid, sendUnitCount);
+            return;
         }
-    });
+    }
 }
 
+// attacks the closest enemy base with less than 10 units
 function updateAI_zergRush(ai_player, ai_state, deltaTime) {
-    ai_state.playerBases.forEach((base) => {
-        // attacks the closest enemy base with less than 10 units
-        if (base.units < 6) return;
+    for (i = 0, n = ai_state.playerBases.length; i < n; i++) {
+        const base = ai_state.playerBases[i];
+        if (base.units < 6) continue;
         const enemyBase = ai_state.enemyBases.length <= 0 ? null : ai_state.enemyBases.reduce((prev, curr) => {
             if (!canSendUnits(base.baseid, curr.baseid)) return prev;
             if (ai_state.playerUnits.find((unit) => unit.targetid == curr.baseid)) return prev;
@@ -612,8 +620,9 @@ function updateAI_zergRush(ai_player, ai_state, deltaTime) {
         if (enemyBase) {
             const sendUnitCount = Math.floor(base.units);
             input_sendUnits(ai_player.id, base.baseid, enemyBase.baseid, sendUnitCount);
+            return;
         }
-    });
+    }
 }
 
 const aiUpdateFunctions = [ updateAI_attackExpand, updateAI_greedyExpand, updateAI_zergRush ];
@@ -621,7 +630,7 @@ const aiUpdateFunctions = [ updateAI_attackExpand, updateAI_greedyExpand, update
 function aiStrategy_normal(ai_controller, ai_state, deltaTime) {
     if (game_state.time < 3 || ai_state.playerBases.length <= 0) return;
 
-    const aiUpdateInterval = 1;
+    const aiUpdateInterval = 0.5;
     ai_controller.updateTime = ai_controller.updateTime || aiUpdateInterval;
     ai_controller.updateTime -= deltaTime;
     if (ai_controller.updateTime > 0) return;
