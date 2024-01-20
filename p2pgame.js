@@ -14,7 +14,7 @@ const gameSpeedSlider = document.getElementById('gameSpeedSlider');
 const gameSpeedLabel = document.getElementById('gameSpeedValue');
 const roadsCheckbox = document.getElementById('roadsCheckbox');
 const playAgainButton = document.getElementById('playAgainButton');
-const endCreditsAudio = document.getElementById('endCreditsAudio');
+let endCreditsAudio = null;
 
 aiSlider.oninput = () => {
     aiSliderLabel.textContent = aiSlider.value;
@@ -45,7 +45,10 @@ singlePlayerButton.addEventListener('click', () => {
 
 playAgainButton.addEventListener('click', () => {
     switchStage('gameOverStage', 'hostStage');
-    endCreditsAudio.pause();
+    if (endCreditsAudio != null) {
+        endCreditsAudio.pause();
+        endCreditsAudio = null;
+    }
 });
 
 // Switch between stages of the game (menu/game)
@@ -135,9 +138,17 @@ function gameOver(winnerId, winnerName, winnerColor) {
     gameOverText.textContent = capitalizedColor + ' Wins!';
     gameOverText.style.color = winnerColor;
     switchStage('gameStage', 'gameOverStage');
-    endCreditsAudio.volume = 0.2;
-    endCreditsAudio.loop = true;
-    endCreditsAudio.play();
+
+    const audioFileIndex = Math.floor(Math.random() * 2);
+    const audioFileSuffix = audioFileIndex == 0 ? '' : ' 2';
+    const audioFileName = 'assets/Lost Heroes of the Circle War' + audioFileSuffix + '.mp3';
+    endCreditsAudio = new Audio(audioFileName);
+    endCreditsAudio.addEventListener('canplaythrough', () => {
+        endCreditsAudio.volume = 0.04;
+        endCreditsAudio.loop = true;
+        endCreditsAudio.play();
+    });
+    endCreditsAudio.load();
 }
 
 // Display copy link button and setup click event
