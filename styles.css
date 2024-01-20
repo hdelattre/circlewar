@@ -73,3 +73,32 @@ input[type=range] {
     border-color: #007bff; /* Change border color on focus */
     box-shadow: 0 2px 4px rgba(0,0,0,0.4); /* Increase shadow on focus */
 }
+
+label {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #333333;
+}
+
+#roadsCheckbox {
+    appearance: none; /* Remove default checkbox appearance */
+    width: 20px; /* Set checkbox width */
+    height: 20px; /* Set checkbox height */
+    border: 2px solid #007bff; /* Add border to checkbox */
+    border-radius: 5px; /* Add rounded corners to checkbox */
+    background-color: white; /* Set checkbox background color */
+    cursor: pointer; /* Set cursor to pointer on hover */
+    transition: background-color 0.3s, border-color 0.3s; /* Smooth transition for background and border color */
+    vertical-align: middle; /* Adjust vertical alignment */
+}
+
+#roadsCheckbox:checked {
+    background-color: #007bff; /* Change background color when checkbox is checked */
+    border-color: #007bff; /* Change border color when checkbox is checked */
+}
+
+#roadsCheckbox:focus {
+    outline: none; /* Remove focus outline */
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.3); /* Add focus outline */
+}
