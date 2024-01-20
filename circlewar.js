@@ -533,7 +533,7 @@ function gatherAIState(ai_controller, ownedBases, neutralBases) {
     return ai_state;
 }
 
-function updateAI_reinforceBases(ai_player, ai_state, deltaTime) {
+function updateAI_reinforceBases(ai_controller, ai_state) {
     for (i = 0, n = ai_state.playerBases.length; i < n; i++) {
         const base = ai_state.playerBases[i];
         if (base.units < 10) continue;
@@ -555,14 +555,14 @@ function updateAI_reinforceBases(ai_player, ai_state, deltaTime) {
         const adjustedUnits = friendlyBase.units - enemyTargeting.length + friendlyTargeting.length;
         if (adjustedUnits <= 5 && base.units >= (friendlyBase.units + 5)) {
             const sendUnitCount = Math.floor(base.units);
-            input_sendUnits(ai_player.id, base.baseid, friendlyBase.baseid, sendUnitCount);
+            input_sendUnits(ai_controller.controlid, base.baseid, friendlyBase.baseid, sendUnitCount);
             return;
         }
     }
 }
 
 // expands to the closest neutral base
-function updateAI_greedyExpand(ai_player, ai_state, deltaTime) {
+function updateAI_greedyExpand(ai_controller, ai_state) {
     for (i = 0, n = ai_state.playerBases.length; i < n; i++) {
         const base = ai_state.playerBases[i];
         if (base.units < 10) continue;
@@ -579,14 +579,14 @@ function updateAI_greedyExpand(ai_player, ai_state, deltaTime) {
         });
         if (neutralBase && base.units >= (neutralBase.units + 3)) {
             const sendUnitCount = Math.floor(base.units);
-            input_sendUnits(ai_player.id, base.baseid, neutralBase.baseid, sendUnitCount);
+            input_sendUnits(ai_controller.controlid, base.baseid, neutralBase.baseid, sendUnitCount);
             return;
         }
     }
 }
 
 // attacks vulnerable enemy bases if possible, else expands
-function updateAI_attackExpand(ai_player, ai_state, deltaTime) {
+function updateAI_attackExpand(ai_controller, ai_state) {
     for (i = 0, n = ai_state.playerBases.length; i < n; i++) {
         const base = ai_state.playerBases[i];
         if (base.units < 10) continue;
@@ -615,19 +615,19 @@ function updateAI_attackExpand(ai_player, ai_state, deltaTime) {
         });
         if (enemyBase && base.units >= (enemyBase.units + 15)) {
             const sendUnitCount = Math.floor(base.units);
-            input_sendUnits(ai_player.id, base.baseid, enemyBase.baseid, sendUnitCount);
+            input_sendUnits(ai_controller.controlid, base.baseid, enemyBase.baseid, sendUnitCount);
             return;
         }
         else if (neutralBase && base.units >= (neutralBase.units + 3)) {
             const sendUnitCount = Math.floor(base.units);
-            input_sendUnits(ai_player.id, base.baseid, neutralBase.baseid, sendUnitCount);
+            input_sendUnits(ai_controller.controlid, base.baseid, neutralBase.baseid, sendUnitCount);
             return;
         }
     }
 }
 
 // attacks the closest enemy base with less than 10 units
-function updateAI_zergRush(ai_player, ai_state, deltaTime) {
+function updateAI_zergRush(ai_controller, ai_state) {
     for (i = 0, n = ai_state.playerBases.length; i < n; i++) {
         const base = ai_state.playerBases[i];
         if (base.units < 6) continue;
@@ -644,7 +644,7 @@ function updateAI_zergRush(ai_player, ai_state, deltaTime) {
         });
         if (enemyBase) {
             const sendUnitCount = Math.floor(base.units);
-            input_sendUnits(ai_player.id, base.baseid, enemyBase.baseid, sendUnitCount);
+            input_sendUnits(ai_controller.controlid, base.baseid, enemyBase.baseid, sendUnitCount);
             return;
         }
     }
@@ -669,11 +669,10 @@ function aiStrategy_normal(ai_controller, ai_state, deltaTime) {
         aiUpdateFunction = getRandomElement(aiUpdateFunctions);
     }
 
-    const ai_player = game_state.players[ai_controller.controlid];
-    aiUpdateFunction(ai_player, ai_state, deltaTime);
+    aiUpdateFunction(ai_controller, ai_state);
 
     if (game_state.roads_only) {
-        updateAI_reinforceBases(ai_player, ai_state, deltaTime);
+        updateAI_reinforceBases(ai_controller, ai_state, deltaTime);
     }
 }
 
