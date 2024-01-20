@@ -540,9 +540,13 @@ function updateAI_reinforceBases(ai_player, ai_state, deltaTime) {
         const adjacentBases = game_state.roads[base.baseid].map((roadid) => { return game_state.bases[roadid]; });
         const adjacentUnowned = adjacentBases.find((adjacentBase) => { return adjacentBase.ownerid < 0 || adjacentBase.ownerid != base.ownerid; });
         if (adjacentUnowned != null) continue;
+        let lastNumAdjacent = 0;
         const friendlyBase = ai_state.playerBases.length <= 1 ? null : ai_state.playerBases.reduce((prev, curr) => {
             if (base.baseid == curr.baseid) return prev;
             if (!canSendUnits(base.baseid, curr.baseid)) return prev;
+            const numAdjacent = game_state.roads[base.baseid].filter((roadid) => { return game_state.bases[roadid].ownerid != curr.ownerid; }).length;
+            if (numAdjacent < lastNumAdjacent) return prev;
+            lastNumAdjacent = numAdjacent;
             return prev.units < curr.units ? prev : curr;
         });
         if (friendlyBase == null) continue;
@@ -562,10 +566,15 @@ function updateAI_greedyExpand(ai_player, ai_state, deltaTime) {
     for (i = 0, n = ai_state.playerBases.length; i < n; i++) {
         const base = ai_state.playerBases[i];
         if (base.units < 10) continue;
+        function canTargetNeutralBase(targetBase) {
+            if (!canSendUnits(base.baseid, targetBase.baseid)) return false;
+            if (ai_state.playerUnits.find((unit) => unit.targetid == targetBase.baseid)) return false;
+            if (ai_state.enemyUnits.find((unit) => unit.targetid == targetBase.baseid)) return false;
+            return true;
+        }
         const neutralBase = ai_state.neutralBases.length <= 0 ? null : ai_state.neutralBases.reduce((prev, curr) => {
-            if (!canSendUnits(base.baseid, curr.baseid)) return prev;
-            if (ai_state.playerUnits.find((unit) => unit.targetid == curr.baseid)) return prev;
-            if (ai_state.enemyUnits.find((unit) => unit.targetid == curr.baseid)) return prev;
+            if (prev == null) return canTargetNeutralBase(curr) ? curr : null;
+            if (!canTargetNeutralBase(curr)) return canTargetNeutralBase(prev) ? prev : null;
             return prev.trainingRate > curr.trainingRate ? prev : curr;
         });
         if (neutralBase && base.units >= (neutralBase.units + 3)) {
@@ -581,15 +590,26 @@ function updateAI_attackExpand(ai_player, ai_state, deltaTime) {
     for (i = 0, n = ai_state.playerBases.length; i < n; i++) {
         const base = ai_state.playerBases[i];
         if (base.units < 10) continue;
+        function canTargetNeutralBase(targetBase) {
+            if (!canSendUnits(base.baseid, targetBase.baseid)) return false;
+            if (ai_state.playerUnits.find((unit) => unit.targetid == targetBase.baseid)) return false;
+            if (ai_state.enemyUnits.find((unit) => unit.targetid == targetBase.baseid)) return false;
+            return true;
+        }
         const neutralBase = ai_state.neutralBases.length <= 0 ? null : ai_state.neutralBases.reduce((prev, curr) => {
-            if (!canSendUnits(base.baseid, curr.baseid)) return prev;
-            if (ai_state.playerUnits.find((unit) => unit.targetid == curr.baseid)) return prev;
-            if (ai_state.enemyUnits.find((unit) => unit.targetid == curr.baseid)) return prev;
+            if (prev == null) return canTargetNeutralBase(curr) ? curr : null;
+            if (!canTargetNeutralBase(curr)) return canTargetNeutralBase(prev) ? prev : null;
             return prev.trainingRate > curr.trainingRate ? prev : curr;
         });
+
+        function canTargetEnemyBase(targetBase) {
+            if (!canSendUnits(base.baseid, targetBase.baseid)) return false;
+            if (ai_state.playerUnits.find((unit) => unit.targetid == targetBase.baseid)) return false;
+            return true;
+        }
         const enemyBase = ai_state.enemyBases.length <= 0 ? null : ai_state.enemyBases.reduce((prev, curr) => {
-            if (!canSendUnits(base.baseid, curr.baseid)) return prev;
-            if (ai_state.playerUnits.find((unit) => unit.targetid == curr.baseid)) return prev;
+            if (prev == null) return canTargetEnemyBase(curr) ? curr : null;
+            if (!canTargetEnemyBase(curr)) return canTargetEnemyBase(prev) ? prev : null;
             if (curr.units < base.units + 2 && prev.units > curr.units + 2) return curr;
             return prev.trainingRate > curr.trainingRate ? prev : curr;
         });
@@ -611,10 +631,15 @@ function updateAI_zergRush(ai_player, ai_state, deltaTime) {
     for (i = 0, n = ai_state.playerBases.length; i < n; i++) {
         const base = ai_state.playerBases[i];
         if (base.units < 6) continue;
+        function canTargetEnemyBase(targetBase) {
+            if (!canSendUnits(base.baseid, targetBase.baseid)) return false;
+            if (ai_state.playerUnits.find((unit) => unit.targetid == targetBase.baseid)) return false;
+            return true;
+        };
         const enemyBase = ai_state.enemyBases.length <= 0 ? null : ai_state.enemyBases.reduce((prev, curr) => {
-            if (!canSendUnits(base.baseid, curr.baseid)) return prev;
-            if (ai_state.playerUnits.find((unit) => unit.targetid == curr.baseid)) return prev;
-            if (curr.units < 10) return curr;
+            if (prev == null) return canTargetEnemyBase(curr) ? curr : null;
+            if (!canTargetEnemyBase(curr)) return canTargetEnemyBase(prev) ? prev : null;
+            if (curr.units < 10 && curr.units < prev.units) return curr;
             return prev.trainingRate > curr.trainingRate ? prev : curr;
         });
         if (enemyBase) {
@@ -810,10 +835,12 @@ let lastFrameTime = null;
 const stateUpdateInterval = 5;
 let nextStateUpdate = stateUpdateInterval;
 
+const game_speed = 1;
+
 function update() {
     if (lastFrameTime == null) return;
     const currentTime = performance.now();
-    const deltaTime = (currentTime - lastFrameTime) / 1000;
+    const deltaTime = (currentTime - lastFrameTime) / 1000 * game_speed;
 
     if (deltaTime >= frame_time) {
         lastFrameTime = currentTime;
