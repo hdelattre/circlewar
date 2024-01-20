@@ -472,7 +472,8 @@ function sendMessage_startGame(playerid, controlid) {
 
 // ------ AI CONTROLLER ------
 
-function gatherAIState(playerid, ownedBases, neutralBases) {
+function gatherAIState(ai_controller, ownedBases, neutralBases) {
+    const playerid = ai_controller.controlid;
     let ai_state = {
         playerBases: [],
         enemyBases: [],
@@ -487,9 +488,6 @@ function gatherAIState(playerid, ownedBases, neutralBases) {
 
         } else if (!game_state.roads_only) {
             ai_state.enemyBases.push(base);
-            if (!game_state.roads_only || game_state.roads) {
-                ai_state.attackBases.push(base);
-            }
         }
     });
 
@@ -584,8 +582,14 @@ function updateAI_zergRush(ai_player, ai_state, deltaTime) {
 
 const aiUpdateFunctions = [ updateAI_attackExpand, updateAI_greedyExpand, updateAI_zergRush ];
 
-function aiStrategy_normal(ai_player, ai_state, deltaTime) {
+function aiStrategy_normal(ai_controller, ai_state, deltaTime) {
     if (game_state.time < 3 || ai_state.playerBases.length <= 0) return;
+
+    const aiUpdateInterval = 1;
+    ai_controller.updateTime = ai_controller.updateTime || aiUpdateInterval;
+    ai_controller.updateTime -= deltaTime;
+    if (ai_controller.updateTime > 0) return;
+    ai_controller.updateTime = aiUpdateInterval;
 
     let aiUpdateFunction = null;
     if (game_state.time < 15 || (ai_state.playerBases.length <= 3 && ai_state.neutralBases.length > 0)) {
@@ -595,6 +599,7 @@ function aiStrategy_normal(ai_player, ai_state, deltaTime) {
         aiUpdateFunction = getRandomElement(aiUpdateFunctions);
     }
 
+    const ai_player = game_state.players[ai_controller.controlid];
     aiUpdateFunction(ai_player, ai_state, deltaTime);
 }
 
@@ -642,10 +647,8 @@ function updateState(deltaTime) {
             }
         });
         ai_controllers.forEach((ai_controller) => {
-            const playerid = ai_controller.controlid;
-            const player = game_state.players[playerid];
-            const ai_state = gatherAIState(playerid, ownedBases, neutralBases);
-            ai_controller.strategy(player, ai_state, deltaTime);
+            const ai_state = gatherAIState(ai_controller, ownedBases, neutralBases);
+            ai_controller.strategy(ai_controller, ai_state, deltaTime);
         });
     }
 }
