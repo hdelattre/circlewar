@@ -102,3 +102,40 @@ label {
     outline: none; /* Remove focus outline */
     box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.3); /* Add focus outline */
 }
+
+#slideshow {
+    display: flex; /* makes it a flex container */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: -1;
+}
+
+#slideshow img {
+    flex: 0 0 auto; /* prevents images from stretching */
+    width: 60%;
+    height: 100%;
+    object-fit: cover;
+}
+
+@keyframes slideshow {
+    0% {
+        transform: translateX(0);
+    }
+    2% {
+        transform: translateX(0);
+    }
+    96% {
+        transform: translateX(-820%);
+    }
+    100% {
+        transform: translateX(-820%);
+    }
+}
+
+#slideshow img {
+    animation: slideshow 40s linear infinite;
+}

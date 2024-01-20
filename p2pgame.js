@@ -10,14 +10,23 @@ const aiSlider = document.getElementById('numAIPlayersSlider');
 const aiSliderLabel = document.getElementById('numAIPlayersValue');
 const basesSlider = document.getElementById('numBasesSlider');
 const basesSliderLabel = document.getElementById('numBasesValue');
+const gameSpeedSlider = document.getElementById('gameSpeedSlider');
+const gameSpeedLabel = document.getElementById('gameSpeedValue');
 const roadsCheckbox = document.getElementById('roadsCheckbox');
+const playAgainButton = document.getElementById('playAgainButton');
 
 aiSlider.oninput = () => {
     aiSliderLabel.textContent = aiSlider.value;
 };
+aiSlider.oninput();
 basesSlider.oninput = () => {
     basesSliderLabel.textContent = basesSlider.value;
 };
+basesSlider.oninput();
+gameSpeedSlider.oninput = () => {
+    gameSpeedLabel.textContent = gameSpeedSlider.value;
+};
+gameSpeedSlider.oninput();
 
 hostGameButton.addEventListener('click', () => {
     hostGame();
@@ -31,6 +40,10 @@ singlePlayerButton.addEventListener('click', () => {
     switchStage('hostStage', 'gameStage');
 
     startSinglePlayerGame();
+});
+
+playAgainButton.addEventListener('click', () => {
+    switchStage('gameOverStage', 'hostStage');
 });
 
 // Switch between stages of the game (menu/game)
@@ -56,6 +69,7 @@ function getGameOptions() {
         num_ai_players: aiSlider.value,
         num_bases: basesSlider.value,
         roads_enabled: roadsCheckbox.checked,
+        game_speed: gameSpeedSlider.value,
     };
 }
 
@@ -111,6 +125,10 @@ function joinGame(peerId) {
     });
 
     switchStage('hostStage', 'pendingStage');
+}
+
+function gameOver(winnerId) {
+    switchStage('gameStage', 'gameOverStage');
 }
 
 // Display copy link button and setup click event

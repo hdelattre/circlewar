@@ -9,7 +9,7 @@
 <body>
     <div id="app">
         <div id="hostStage">
-            <img id="logoimage" src="circlewar.png" alt="CircleWar"></img>
+            <img id="logoimage" src="assets/circlewar_logo.png" alt="CircleWar"></img>
             <br>
             <button id="hostGameButton">Host Game</button>
             <p>or</p>
@@ -31,6 +31,10 @@
                 <br>
                 <label for="roadsCheckbox">Roads:</label>
                 <input type="checkbox" id="roadsCheckbox" unchecked>
+                <br>
+                <label for="gameSpeedSlider">Game Speed:</label>
+                <input type="range" id="gameSpeedSlider" min="1" max="20" value="1">
+                <span id="gameSpeedValue">1</span>
             </div>
         </div>
         <div id="pendingStage" style="display: none;">
@@ -45,6 +49,22 @@
         </div>
         <div id="gameStage" style="display: none;">
             <canvas id="gameCanvas" width="650" height="850"></canvas>
+        </div>
+        <div id="gameOverStage" style="display: none;">
+            <p id="gameOverText"></p>
+            <button id="playAgainButton">Play Again</button>
+            <div id="slideshow">
+                <img src="assets/circlewar_lore_1.jpeg" alt="CircleWar Lore 1"></img>
+                <img src="assets/circlewar_lore_2.jpeg" alt="CircleWar Lore 2"></img>
+                <img src="assets/circlewar_lore_3.jpeg" alt="CircleWar Lore 3"></img>
+                <img src="assets/circlewar_lore_4.jpeg" alt="CircleWar Lore 4"></img>
+                <img src="assets/circlewar_lore_5.jpeg" alt="CircleWar Lore 5"></img>
+                <img src="assets/circlewar_lore_6.jpeg" alt="CircleWar Lore 6"></img>
+                <img src="assets/circlewar_lore_7.jpeg" alt="CircleWar Lore 7"></img>
+                <img src="assets/circlewar_lore_8.jpeg" alt="CircleWar Lore 8"></img>
+                <img src="assets/circlewar_lore_9.jpeg" alt="CircleWar Lore 9"></img>
+                <img src="assets/circlewar_lore_10.jpeg" alt="CircleWar Lore 10"></img>
+            </div>
         </div>
 	</div>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>

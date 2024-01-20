@@ -27,20 +27,31 @@ const baseRadius = 20;
 // ------ GAME STATE ------
 let game_state = {
     time: 0,
+    speed: 1,
+    roads_only: true,
     players: [],
     bases: [],
-    roads_only: true,
     roads: [],
     units: [],
 }
 
 let ai_controllers = [];
 
-let lastDeltaTime = 0;
-
 // ------ GAME FUNCTIONS ------
 
 function initGame(game_options) {
+
+    // Reset game state
+    game_state = {
+        time: 0,
+        speed: game_options.game_speed,
+        roads_only: game_options.roads_enabled,
+        players: [],
+        bases: [],
+        roads: [],
+        units: [],
+    };
+    ai_controllers = [];
 
     // Init bases
     const num_bases = game_options.num_bases;
@@ -57,7 +68,6 @@ function initGame(game_options) {
     }
 
     // Init roads
-    game_state.roads_only = game_options.roads_enabled;
     if (game_state.roads_only) {
         game_state.bases.forEach((base) => {
             const num_roads = Math.floor(Math.random() * 3) + 1;
@@ -708,8 +718,8 @@ function updateState(deltaTime) {
     const newUnits = updateUnits(game_state.units, deltaTime);
     game_state.units = newUnits;
 
-    // Update AI on host
     if (isHost()) {
+        // AI update
         let ownedBases = [];
         let neutralBases = [];
         game_state.bases.forEach((base) => {
@@ -723,6 +733,25 @@ function updateState(deltaTime) {
             const ai_state = gatherAIState(ai_controller, ownedBases, neutralBases);
             ai_controller.strategy(ai_controller, ai_state, deltaTime);
         });
+
+        // Check for game over
+        let winner = null;
+        for (let i = 0, n = game_state.bases.length; i < n; i++) {
+            const base = game_state.bases[i];
+            if (base.ownerid < 0) continue;
+            if (winner == null) {
+                winner = base.ownerid;
+            }
+            else if (winner != base.ownerid) {
+                winner = null;
+                break;
+            }
+        }
+        if (winner != null) {
+            stopGame();
+            console.log('Player ' + winner + ' wins!');
+            gameOver(winner);
+        }
     }
 }
 
@@ -834,16 +863,13 @@ let lastFrameTime = null;
 const stateUpdateInterval = 5;
 let nextStateUpdate = stateUpdateInterval;
 
-const game_speed = 1;
-
 function update() {
     if (lastFrameTime == null) return;
     const currentTime = performance.now();
-    const deltaTime = (currentTime - lastFrameTime) / 1000 * game_speed;
+    const deltaTime = (currentTime - lastFrameTime) / 1000 * game_state.speed;
 
     if (deltaTime >= frame_time) {
         lastFrameTime = currentTime;
-        lastDeltaTime = deltaTime;
         updateState(deltaTime);
         draw();
     }
