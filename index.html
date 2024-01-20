@@ -9,32 +9,35 @@
 <body>
     <div id="app">
         <div id="hostStage">
-            <img id="logoimage" src="assets/circlewar_logo.png" alt="CircleWar"></img>
-            <br>
-            <button id="hostGameButton">Host Game</button>
-            <p>or</p>
-            <div id="joinBox">
-                <input type="text" id="joinCodeInput" placeholder="Enter join code">
+            <img id="backgroundimage" src="assets/circlewar_background.png" alt="CircleWar"></img>
+            <div id="menu">
+                <img id="logoimage" src="assets/circlewar_logo.png" alt="CircleWar"></img>
                 <br>
-                <button id="joinGameButton">Join Game</button>
-            </div>
-            <p>or</p>
-            <button id="singlePlayerButton">Single Player</button>
-            <div id="gameOptions">
-                <label for="numBasesSlider">Bases:</label>
-                <input type="range" id="numBasesSlider" min="15" max="70" value="40">
-                <span id="numBasesValue">40</span>
-                <br>
-                <label for="numAIPlayersSlider">AI Players:</label>
-                <input type="range" id="numAIPlayersSlider" min="0" max="7" value="1">
-                <span id="numAIPlayersValue">1</span>
-                <br>
-                <label for="roadsCheckbox">Roads:</label>
-                <input type="checkbox" id="roadsCheckbox" unchecked>
-                <br>
-                <label for="gameSpeedSlider">Game Speed:</label>
-                <input type="range" id="gameSpeedSlider" min="1" max="20" value="1">
-                <span id="gameSpeedValue">1</span>
+                <button id="hostGameButton">Host Game</button>
+                <p>or</p>
+                <div id="joinBox">
+                    <input type="text" id="joinCodeInput" placeholder="Enter join code">
+                    <br>
+                    <button id="joinGameButton">Join Game</button>
+                </div>
+                <p>or</p>
+                <button id="singlePlayerButton">Single Player</button>
+                <div id="gameOptions">
+                    <label for="numBasesSlider">Bases:</label>
+                    <input type="range" id="numBasesSlider" min="15" max="70" value="40">
+                    <span id="numBasesValue">40</span>
+                    <br>
+                    <label for="numAIPlayersSlider">AI Players:</label>
+                    <input type="range" id="numAIPlayersSlider" min="0" max="7" value="1">
+                    <span id="numAIPlayersValue">1</span>
+                    <br>
+                    <label for="roadsCheckbox">Roads:</label>
+                    <input type="checkbox" id="roadsCheckbox" unchecked>
+                    <br>
+                    <label for="gameSpeedSlider">Game Speed:</label>
+                    <input type="range" id="gameSpeedSlider" min="1" max="20" value="1">
+                    <span id="gameSpeedValue">1</span>
+                </div>
             </div>
         </div>
         <div id="pendingStage" style="display: none;">
