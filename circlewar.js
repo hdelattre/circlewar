@@ -534,17 +534,18 @@ function gatherAIState(ai_controller, ownedBases, neutralBases) {
 }
 
 function updateAI_reinforceBases(ai_player, ai_state, deltaTime) {
-    ai_state.playerBases.forEach((base) => {
-        if (base.units < 10) return;
+    for (i = 0, n = ai_state.playerBases.length; i < n; i++) {
+        const base = ai_state.playerBases[i];
+        if (base.units < 10) continue;
         const adjacentBases = game_state.roads[base.baseid].map((roadid) => { return game_state.bases[roadid]; });
         const adjacentUnowned = adjacentBases.find((adjacentBase) => { return adjacentBase.ownerid < 0 || adjacentBase.ownerid != base.ownerid; });
-        if (adjacentUnowned != null) return;
+        if (adjacentUnowned != null) continue;
         const friendlyBase = ai_state.playerBases.length <= 1 ? null : ai_state.playerBases.reduce((prev, curr) => {
             if (base.baseid == curr.baseid) return prev;
             if (!canSendUnits(base.baseid, curr.baseid)) return prev;
             return prev.units < curr.units ? prev : curr;
         });
-        if (friendlyBase == null) return;
+        if (friendlyBase == null) continue;
         const enemyTargeting = ai_state.enemyUnits.filter((unit) => unit.targetid == base.baseid);
         const friendlyTargeting = ai_state.enemyUnits.filter((unit) => unit.targetid == base.baseid);
         const adjustedUnits = friendlyBase.units - enemyTargeting.length + friendlyTargeting.length;
@@ -553,7 +554,7 @@ function updateAI_reinforceBases(ai_player, ai_state, deltaTime) {
             input_sendUnits(ai_player.id, base.baseid, friendlyBase.baseid, sendUnitCount);
             return;
         }
-    });
+    }
 }
 
 function updateAI_greedyExpand(ai_player, ai_state, deltaTime) {
