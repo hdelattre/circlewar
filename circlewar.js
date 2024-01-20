@@ -28,18 +28,22 @@ const baseRadius = 20;
 let game_state = {
     time: 0,
     players: [],
-    ai_players: [],
     bases: [],
+    roads_only: true,
+    roads: [],
     units: [],
 }
+
+let ai_controllers = [];
 
 let lastDeltaTime = 0;
 
 // ------ GAME FUNCTIONS ------
 
 function initGame(game_options) {
+
+    // Init bases
     const num_bases = game_options.num_bases;
-    const num_ai = game_options.num_ai_players;
     for (let i = 0; i < num_bases; i++) {
         const newBase = {
             baseid: game_state.bases.length,
@@ -52,12 +56,34 @@ function initGame(game_options) {
         addBase(newBase);
     }
 
+    // Init roads
+    game_state.roads_only = game_options.roads_enabled;
+    if (game_state.roads_only) {
+        game_state.bases.forEach((base) => {
+            const num_roads = Math.floor(Math.random() * 3) + 1;
+            for (let i = 0; i < num_roads; i++) {
+                const closestBase = game_state.bases.reduce((prev, curr) => {
+                    if (base.baseid == curr.baseid) return prev;
+                    const existing_road = game_state.roads[base.baseid].find((road) => { return road == curr.baseid });
+                    if (existing_road) return prev;
+                    if (getDistance(base.location, prev.location) < getDistance(base.location, curr.location)) {
+                        return prev;
+                    }
+                    return curr;
+                });
+                addRoad(base, closestBase);
+            }
+        });
+    }
+
+    // Init players
     addPlayer('Host');
 
     connectedPlayers.forEach((player) => {
         addPlayer(player.name);
     });
 
+    const num_ai = game_options.num_ai_players;
     const ai_names = [ 'HERB', 'ROSEMARY', 'THYME', 'SAGE', 'OREGANO', 'BASIL', 'MINT', 'PARSLEY', 'DILL', 'CHIVE' ];
     for (let i = 0; i < num_ai; i++) {
         addAIPlayer(ai_names[i]);
@@ -83,17 +109,41 @@ function addPlayer(name) {
 
 function addAIPlayer(name) {
     const playerIndex = addPlayer(name);
-    game_state.ai_players.push(playerIndex);
+    const strategy = aiStrategy_normal;
+    ai_controllers.push({
+        controlid: playerIndex,
+        strategy: strategy,
+    });
 }
 
 function addBase(base) {
     game_state.bases.push(base);
+    game_state.roads.push([]);
+}
+
+function addRoad(startBase, endBase) {
+    game_state.roads[startBase.baseid].push(endBase.baseid);
+    game_state.roads[endBase.baseid].push(startBase.baseid);
 }
 
 function assignStartBase(base, playerid) {
     base.ownerid = playerid;
     base.units = 20;
     base.trainingRate = 1;
+}
+
+function canSendUnits(startBaseId, endBaseId) {
+    return !game_state.roads_only || game_state.roads[startBaseId].indexOf(endBaseId) >= 0;
+}
+
+function input_sendUnits(controlId, startBaseId, endBaseId, numUnits) {
+    const startBase = game_state.bases[startBaseId];
+    const endBase = game_state.bases[endBaseId];
+    if (startBase.ownerid != controlId) return;
+    // if (startBase.units < numUnits) return;
+    if (!canSendUnits(startBaseId, endBaseId)) return;
+    sendUnits(startBase, endBase, numUnits);
+    sendMessage_SendUnits(startBaseId, endBaseId, numUnits);
 }
 
 function sendUnits(startBase, endBase, numUnits) {
@@ -172,6 +222,10 @@ function updateUnits(units, deltaTime, allow_capture = true) {
         }
     });
     return newUnits;
+}
+
+function getPlayerColor(playerId) {
+    return playerId >= 0 ? game_state.players[playerId].color : 'gray';
 }
 
 // ------ INPUT HANDLING ------
@@ -263,19 +317,22 @@ function handleMouseUp(event) {
             return;
         }
 
-        dragEndBase = game_state.bases.find((base) => {
-            return getDistance(dragLocation, base.location) <= getBaseSelectRadius(base);
-        });
-        
-        if (dragStartBase && dragEndBase) {
-            selectedBases.forEach((baseid) => {
-                if (game_state.bases[baseid].ownerid != dragStartBase.ownerid) return;
-                if (baseid == dragEndBase.baseid) return;
-                const base = game_state.bases[baseid];
-                const unitCount = Math.floor(base.units);
-                sendUnits(base, dragEndBase, unitCount);
-                sendMessage_SendUnits(baseid, dragEndBase.baseid, unitCount);
+        dragLocation = getMouseLocation(event) || dragLocation;
+
+        if (dragLocation) {
+            dragEndBase = game_state.bases.find((base) => {
+                return getDistance(dragLocation, base.location) <= getBaseSelectRadius(base);
             });
+
+            if (dragStartBase && dragEndBase) {
+                selectedBases.forEach((baseid) => {
+                    if (game_state.bases[baseid].ownerid != dragStartBase.ownerid) return;
+                    if (baseid == dragEndBase.baseid) return;
+                    const base = game_state.bases[baseid];
+                    const unitCount = Math.floor(base.units);
+                    input_sendUnits(controlledPlayerId, baseid, dragEndBase.baseid, unitCount);
+                });
+            }
         }
 
         isDragging = false;
@@ -329,6 +386,7 @@ function getRandomElement(arr) {
 
 function makeColorTranslucent(color, opacity) {
     const colors = {
+        gray: '128, 128, 128',
         red: '255, 0, 0',
         green: '0, 128, 0',
         blue: '0, 0, 255',
@@ -414,66 +472,131 @@ function sendMessage_startGame(playerid, controlid) {
 
 // ------ AI CONTROLLER ------
 
-function updateAI_greedyExpand(ai_player, ai_state) {
+function gatherAIState(playerid, ownedBases, neutralBases) {
+    let ai_state = {
+        playerBases: [],
+        enemyBases: [],
+        neutralBases: game_state.roads_only ? [] : neutralBases,
+        playerUnits: [],
+        enemyUnits: [],
+    };
+
+    ownedBases.forEach((base) => {
+        if (base.ownerid == playerid) {
+            ai_state.playerBases.push(base);
+
+        } else if (!game_state.roads_only) {
+            ai_state.enemyBases.push(base);
+            if (!game_state.roads_only || game_state.roads) {
+                ai_state.attackBases.push(base);
+            }
+        }
+    });
+
+    if (game_state.roads_only) {
+        ai_state.playerBases.forEach((base) => {
+            const roadBases = game_state.roads[base.baseid].map((roadid) => {
+                return game_state.bases[roadid];
+            });
+            roadBases.forEach((roadBase) => {
+                if (roadBase.ownerid == playerid) return;
+                if (roadBase.ownerid < 0) {
+                    if (ai_state.neutralBases.find((neutralBase) => neutralBase.baseid == roadBase.baseid)) return;
+                    ai_state.neutralBases.push(roadBase);
+                }
+                else {
+                    if (ai_state.enemyBases.find((enemyBase) => enemyBase.baseid == roadBase.baseid)) return;
+                    ai_state.enemyBases.push(roadBase);
+                }
+            });
+        });
+    }
+
+    game_state.units.forEach((unit) => {
+        if (unit.ownerid == playerid) {
+            ai_state.playerUnits.push(unit);
+        } else {
+            ai_state.enemyUnits.push(unit);
+        }
+    });
+
+    return ai_state;
+}
+
+function updateAI_greedyExpand(ai_player, ai_state, deltaTime) {
     ai_state.playerBases.forEach((base) => {
         if (base.units < 10) return;
         const neutralBase = ai_state.neutralBases.length <= 0 ? null : ai_state.neutralBases.reduce((prev, curr) => {
+            if (!canSendUnits(base.baseid, curr.baseid)) return prev;
             if (ai_state.playerUnits.find((unit) => unit.targetid == curr.baseid)) return prev;
             if (ai_state.enemyUnits.find((unit) => unit.targetid == curr.baseid)) return prev;
             return prev.trainingRate > curr.trainingRate ? prev : curr;
         });
         if (neutralBase && base.units >= (neutralBase.units + 3)) {
             const sendUnitCount = Math.floor(base.units);
-            sendUnits(base, neutralBase, sendUnitCount);
-            sendMessage_SendUnits(base.baseid, neutralBase.baseid, sendUnitCount);
+            input_sendUnits(ai_player.id, base.baseid, neutralBase.baseid, sendUnitCount);
         }
     });
 }
 
-function updateAI_attackExpand(ai_player, ai_state) {
+function updateAI_attackExpand(ai_player, ai_state, deltaTime) {
     ai_state.playerBases.forEach((base) => {
         if (base.units < 10) return;
         const neutralBase = ai_state.neutralBases.length <= 0 ? null : ai_state.neutralBases.reduce((prev, curr) => {
+            if (!canSendUnits(base.baseid, curr.baseid)) return prev;
             if (ai_state.playerUnits.find((unit) => unit.targetid == curr.baseid)) return prev;
             if (ai_state.enemyUnits.find((unit) => unit.targetid == curr.baseid)) return prev;
             return prev.trainingRate > curr.trainingRate ? prev : curr;
         });
         const enemyBase = ai_state.enemyBases.length <= 0 ? null : ai_state.enemyBases.reduce((prev, curr) => {
+            if (!canSendUnits(base.baseid, curr.baseid)) return prev;
             if (ai_state.playerUnits.find((unit) => unit.targetid == curr.baseid)) return prev;
             if (curr.units < base.units + 2 && prev.units > curr.units + 2) return curr;
             return prev.trainingRate > curr.trainingRate ? prev : curr;
         });
         if (enemyBase && base.units >= (enemyBase.units + 15)) {
             const sendUnitCount = Math.floor(base.units);
-            sendUnits(base, enemyBase, sendUnitCount);
-            sendMessage_SendUnits(base.baseid, enemyBase.baseid, sendUnitCount);
+            input_sendUnits(ai_player.id, base.baseid, enemyBase.baseid, sendUnitCount);
         }
         else if (neutralBase && base.units >= (neutralBase.units + 3)) {
             const sendUnitCount = Math.floor(base.units);
-            sendUnits(base, neutralBase, sendUnitCount);
-            sendMessage_SendUnits(base.baseid, neutralBase.baseid, sendUnitCount);
+            input_sendUnits(ai_player.id, base.baseid, neutralBase.baseid, sendUnitCount);
         }
     });
 }
 
-function updateAI_zergRush(ai_player, ai_state) {
+function updateAI_zergRush(ai_player, ai_state, deltaTime) {
     ai_state.playerBases.forEach((base) => {
         // attacks the closest enemy base with less than 10 units
         if (base.units < 6) return;
         const enemyBase = ai_state.enemyBases.length <= 0 ? null : ai_state.enemyBases.reduce((prev, curr) => {
+            if (!canSendUnits(base.baseid, curr.baseid)) return prev;
             if (ai_state.playerUnits.find((unit) => unit.targetid == curr.baseid)) return prev;
             if (curr.units < 10) return curr;
             return prev.trainingRate > curr.trainingRate ? prev : curr;
         });
         if (enemyBase) {
             const sendUnitCount = Math.floor(base.units);
-            sendUnits(base, enemyBase, sendUnitCount);
-            sendMessage_SendUnits(base.baseid, enemyBase.baseid, sendUnitCount);
+            input_sendUnits(ai_player.id, base.baseid, enemyBase.baseid, sendUnitCount);
         }
     });
 }
 
 const aiUpdateFunctions = [ updateAI_attackExpand, updateAI_greedyExpand, updateAI_zergRush ];
+
+function aiStrategy_normal(ai_player, ai_state, deltaTime) {
+    if (game_state.time < 3 || ai_state.playerBases.length <= 0) return;
+
+    let aiUpdateFunction = null;
+    if (game_state.time < 15 || (ai_state.playerBases.length <= 3 && ai_state.neutralBases.length > 0)) {
+        aiUpdateFunction = updateAI_greedyExpand;
+    }
+    else {
+        aiUpdateFunction = getRandomElement(aiUpdateFunctions);
+    }
+
+    aiUpdateFunction(ai_player, ai_state, deltaTime);
+}
 
 // ------ GAME TICK ------
 
@@ -507,72 +630,67 @@ function updateState(deltaTime) {
     const newUnits = updateUnits(game_state.units, deltaTime);
     game_state.units = newUnits;
 
-    let ownedBases = [];
-    let neutralBases = [];
-    game_state.bases.forEach((base) => {
-        if (base.ownerid < 0) {
-            neutralBases.push(base);
-        } else {
-            ownedBases.push(base);
-        }
-    });
-
     // Update AI on host
-    if (isHost() && game_state.time >= 3) {
-        game_state.ai_players.forEach((playerid) => {
+    if (isHost()) {
+        let ownedBases = [];
+        let neutralBases = [];
+        game_state.bases.forEach((base) => {
+            if (base.ownerid < 0) {
+                neutralBases.push(base);
+            } else {
+                ownedBases.push(base);
+            }
+        });
+        ai_controllers.forEach((ai_controller) => {
+            const playerid = ai_controller.controlid;
             const player = game_state.players[playerid];
-            let ai_state = {
-                playerBases: [],
-                enemyBases: [],
-                neutralBases: neutralBases,
-                playerUnits: [],
-                enemyUnits: [],
-            }
-
-            ownedBases.forEach((base) => {
-                if (base.ownerid == playerid) {
-                    ai_state.playerBases.push(base);
-                } else {
-                    ai_state.enemyBases.push(base);
-                }
-            });
-
-            game_state.units.forEach((unit) => {
-                if (unit.ownerid == playerid) {
-                    ai_state.playerUnits.push(unit);
-                } else {
-                    ai_state.enemyUnits.push(unit);
-                }
-            });
-
-            if (game_state.time < 15 || (ai_state.playerBases.length <= 3 && ai_state.neutralBases.length > 0)) {
-                aiUpdateFunction = updateAI_greedyExpand;
-            }
-            else {
-                aiUpdateFunction = getRandomElement(aiUpdateFunctions);
-            }
-
-            aiUpdateFunction(player, ai_state);
+            const ai_state = gatherAIState(playerid, ownedBases, neutralBases);
+            ai_controller.strategy(player, ai_state, deltaTime);
         });
     }
 }
 
 // ------ RENDERING ------
+// Create an offscreen canvas to cache the background
+const offscreenCanvas = document.createElement('canvas');
+const offscreenCtx = offscreenCanvas.getContext('2d');
+
+// Draw the background on the offscreen canvas
+function drawBackground() {
+    //todo
+}
 
 function draw() {
     // Clear the canvas
     context.clearRect(0, 0, canvas.width, canvas.height);
 
+    // Draw the cached background onto the main canvas
+    context.drawImage(offscreenCanvas, 0, 0);
+
+    game_state.roads.forEach((roads, baseid) => {
+        const base = game_state.bases[baseid];
+        roads.forEach((roadid) => {
+            const roadBase = game_state.bases[roadid];
+            const roadColor = base.ownerid == roadBase.ownerid ? getPlayerColor(roadBase.ownerid) : 'gray';
+            context.beginPath();
+            context.strokeStyle = makeColorTranslucent(roadColor, 0.5);
+            context.lineWidth = 5;
+            context.lineCap = 'round';
+            context.moveTo(base.location.x, base.location.y);
+            context.lineTo(roadBase.location.x, roadBase.location.y);
+            context.stroke();
+        });
+    });
+
     // Render game objects
     game_state.bases.forEach((base) => {
         const { x, y } = base.location; // Get the x and y coordinates from the base's location
-        const owner = base.ownerid >= 0 ? game_state.players[base.ownerid] : null
         const radius = baseRadius;
 
         // Draw the base circle
         context.beginPath();
         context.arc(x, y, radius, 0, 2 * Math.PI);
-        context.fillStyle = owner ? owner.color : 'gray';
+        context.fillStyle = getPlayerColor(base.ownerid);
         context.fill();
 
         // Draw the number of units
@@ -603,9 +721,10 @@ function draw() {
     if (isDragging && dragStartBase && dragLocation) {
         selectedBases.forEach((baseid) => {
             const base = game_state.bases[baseid];
+            const baseColor = getPlayerColor(dragStartBase.ownerid);
             // Draw line from start base to mouse location
             context.beginPath();
-            context.strokeStyle = makeColorTranslucent(game_state.players[dragStartBase.ownerid].color, 0.5)
+            context.strokeStyle = makeColorTranslucent(baseColor, 0.5)
             context.lineWidth = 5;
             context.lineCap = 'round';
             context.moveTo(base.location.x, base.location.y);
@@ -668,10 +787,14 @@ function isGameStarted() {
 }
 
 function startGame(game_options) {
+    if (isGameStarted()) return;
+
     if (isHost()) {
         controlledPlayerId = 0;
         initGame(game_options);
     }
+
+    drawBackground();
 
     // Start the game loop
     lastFrameTime = performance.now();

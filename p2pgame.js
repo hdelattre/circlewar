@@ -10,6 +10,7 @@ const aiSlider = document.getElementById('numAIPlayersSlider');
 const aiSliderLabel = document.getElementById('numAIPlayersValue');
 const basesSlider = document.getElementById('numBasesSlider');
 const basesSliderLabel = document.getElementById('numBasesValue');
+const roadsCheckbox = document.getElementById('roadsCheckbox');
 
 aiSlider.oninput = () => {
     aiSliderLabel.textContent = aiSlider.value;
@@ -53,7 +54,8 @@ function isHost() {
 function getGameOptions() {
     return {
         num_ai_players: aiSlider.value,
-        num_bases: basesSlider.value
+        num_bases: basesSlider.value,
+        roads_enabled: roadsCheckbox.checked,
     };
 }
 

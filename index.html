@@ -20,7 +20,7 @@
             </div>
             <p>or</p>
             <button id="singlePlayerButton">Single Player</button>
-            <div id="sliders">
+            <div id="gameOptions">
                 <label for="numBasesSlider">Bases:</label>
                 <input type="range" id="numBasesSlider" min="15" max="70" value="40">
                 <span id="numBasesValue">40</span>
@@ -28,6 +28,9 @@
                 <label for="numAIPlayersSlider">AI Players:</label>
                 <input type="range" id="numAIPlayersSlider" min="0" max="7" value="1">
                 <span id="numAIPlayersValue">1</span>
+                <br>
+                <input type="checkbox" id="roadsCheckbox" unchecked>
+                <label for="roadsCheckbox">Roads:</label>
             </div>
         </div>
         <div id="pendingStage" style="display: none;">
