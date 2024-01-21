@@ -18,19 +18,95 @@ const musicCheckbox = document.getElementById('musicCheckbox');
 const playAgainButton = document.getElementById('playAgainButton');
 let endCreditsAudio = null;
 
+// ----- COOKIES -----
 
-aiSlider.oninput = () => {
-    aiSliderLabel.textContent = aiSlider.value;
-};
-aiSlider.oninput();
-basesSlider.oninput = () => {
-    basesSliderLabel.textContent = basesSlider.value;
-};
-basesSlider.oninput();
-gameSpeedSlider.oninput = () => {
-    gameSpeedLabel.textContent = gameSpeedSlider.value;
-};
-gameSpeedSlider.oninput();
+function setCookie(name, value, days) {
+    const expires = new Date();
+    expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+    document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`;
+}
+
+function getCookie(name) {
+    const cookieName = `${name}=`;
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+        let cookie = cookies[i];
+        while (cookie.charAt(0) === ' ') {
+            cookie = cookie.substring(1);
+        }
+        if (cookie.indexOf(cookieName) === 0) {
+            return cookie.substring(cookieName.length, cookie.length);
+        }
+    }
+    return null;
+}
+
+const COOKIE_AI = 'ai';
+const COOKIE_BASES = 'bases';
+const COOKIE_GAME_SPEED = 'gameSpeed';
+const COOKIE_ROADS = 'roadsCheckbox';
+const COOKIE_MUSIC = 'musicCheckbox';
+const COOKIE_CAMERA = 'cameraCheckbox';
+
+function loadSettingsFromCookies() {
+    const aiSliderValue = getCookie(COOKIE_AI);
+    const basesSliderValue = getCookie(COOKIE_BASES);
+    const gameSpeedSliderValue = getCookie(COOKIE_GAME_SPEED);
+    const roadsCheckboxValue = getCookie(COOKIE_ROADS);
+    const musicCheckboxValue = getCookie(COOKIE_MUSIC);
+    const cameraCheckboxValue = getCookie(COOKIE_CAMERA);
+
+    if (aiSliderValue) {
+        aiSlider.value = aiSliderValue;
+        aiSliderLabel.textContent = aiSliderValue;
+    }
+
+    if (basesSliderValue) {
+        basesSlider.value = basesSliderValue;
+        basesSliderLabel.textContent = basesSliderValue;
+    }
+
+    if (gameSpeedSliderValue) {
+        gameSpeedSlider.value = gameSpeedSliderValue;
+        gameSpeedLabel.textContent = gameSpeedSliderValue;
+    }
+
+    if (roadsCheckboxValue) {
+        roadsCheckbox.checked = roadsCheckboxValue == 'true';
+    }
+
+    if (musicCheckboxValue) {
+        musicCheckbox.checked = musicCheckboxValue == 'true';
+    }
+
+    if (cameraCheckboxValue) {
+        cameraCheckbox.checked = cameraCheckboxValue == 'true';
+    }
+}
+
+// Never expire cookies
+const cookieExpirationDays = 365 * 10;
+
+// Load settings values from cookies when the page loads
+window.addEventListener('load', () => {
+    loadSettingsFromCookies();
+});
+
+// ----- MENU -----
+
+const updateSetting_AI = () => { aiSliderLabel.textContent = aiSlider.value; setCookie(COOKIE_AI, aiSlider.value, cookieExpirationDays); };
+const updateSetting_bases = () => { basesSliderLabel.textContent = basesSlider.value; setCookie(COOKIE_BASES, basesSlider.value, cookieExpirationDays); };
+const updateSetting_gameSpeed = () => { gameSpeedLabel.textContent = gameSpeedSlider.value; setCookie(COOKIE_GAME_SPEED, gameSpeedSlider.value, cookieExpirationDays); };
+const updateSetting_roads = () => { setCookie(COOKIE_ROADS, roadsCheckbox.checked, cookieExpirationDays); };
+const updateSetting_music = () => { setCookie(COOKIE_MUSIC, musicCheckbox.checked, cookieExpirationDays); };
+const updateSetting_camera = () => { setCookie(COOKIE_CAMERA, cameraCheckbox.checked, cookieExpirationDays); };
+
+aiSlider.oninput = updateSetting_AI;
+basesSlider.oninput = updateSetting_bases;
+gameSpeedSlider.oninput = updateSetting_gameSpeed;
+roadsCheckbox.oninput = updateSetting_roads;
+musicCheckbox.oninput = updateSetting_music;
+cameraCheckbox.oninput = updateSetting_camera;
 
 hostGameButton.addEventListener('click', () => {
     hostGame();
@@ -53,6 +129,8 @@ playAgainButton.addEventListener('click', () => {
         endCreditsAudio = null;
     }
 });
+
+// ----- VIEW -----
 
 // Switch between stages of the game (menu/game)
 function switchStage(hideStageId, showStageId) {
