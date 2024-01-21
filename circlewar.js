@@ -100,6 +100,13 @@ function initGame(game_options) {
     }
 }
 
+function handlePlayerWin(winnerid) {
+    stopGame();
+    const winning_player = game_state.players[winnerid];
+    console.log('Player ' + winnerid + ' wins!');
+    gameOver(winnerid, winning_player.name, winning_player.color);
+}
+
 function getNumActivePlayers() {
     return game_state.players.length;
 }
@@ -436,6 +443,7 @@ function updateGameState(new_game_state) {
 
 const MESSAGE_GAMESTATE = 'gameState';
 const MESSAGE_STARTGAME = 'startGame';
+const MESSAGE_PLAYERWIN = 'playerWin';
 const MESSAGE_UNITSMOVED = 'unitsMoved';
 
 function handleMessage(message) {
@@ -457,6 +465,9 @@ function handleMessage(message) {
             console.log('Joined game as player ' + localPlayerId + ' with control over player ' + controlledPlayerId);
             startGame(getGameOptions());
         }
+    }
+    else if (messageType == MESSAGE_PLAYERWIN) {
+        handlePlayerWin(data.winnerid);
     }
 }
 
@@ -488,6 +499,15 @@ function sendMessage_startGame(playerid, controlid) {
             playerid: playerid,
             controlid: controlid,
             game_state: game_state,
+        }
+    });
+}
+
+function sendMessage_playerWin(winnerid) {
+    sendMessage({
+        type: MESSAGE_PLAYERWIN,
+        data: {
+            winnerid: winnerid,
         }
     });
 }
@@ -748,10 +768,8 @@ function updateState(deltaTime) {
             }
         }
         if (winner != null) {
-            stopGame();
-            const winning_player = game_state.players[winner];
-            console.log('Player ' + winner + ' wins!');
-            gameOver(winner, winning_player.name, winning_player.color);
+            handlePlayerWin(winner);
+            sendMessage_playerWin(winner);
         }
     }
 }
