@@ -463,8 +463,7 @@ function handleMessage(message) {
             localPlayerId = data.playerid;
             controlledPlayerId = data.controlid;
             console.log('Joined game as player ' + localPlayerId + ' with control over player ' + controlledPlayerId);
-            startGame(getGameOptions());
-            startCamera(controlledPlayerId);
+            startGame(data.game_options);
         }
     }
     else if (messageType == MESSAGE_PLAYERWIN) {
@@ -493,13 +492,14 @@ function sendMessage_SendUnits(startBaseId, endBaseId, numUnits) {
     });
 }
 
-function sendMessage_startGame(playerid, controlid) {
+function sendMessage_startGame(playerid, controlid, game_options) {
     sendMessage({
         type: MESSAGE_STARTGAME,
         data: {
             playerid: playerid,
             controlid: controlid,
             game_state: game_state,
+            game_options: game_options,
         }
     });
 }
@@ -818,18 +818,6 @@ function draw() {
         context.fillStyle = getPlayerColor(base.ownerid);
         context.fill();
 
-        // Draw the number of units
-        context.font = '20px Arial';
-        context.fillStyle = 'black';
-        context.textAlign = 'center';
-        context.fillText(parseInt(base.units), x, y + radius + 20);
-
-        // Draw the training rate
-        context.font = '15px Arial';
-        context.fillStyle = 'white';
-        context.textAlign = 'center';
-        context.fillText('+' + base.trainingRate.toFixed(1), x - 3, y + 5);
-
         // Draw the player's stream image
         const playerStream = playerStreams[base.ownerid];
         if (playerStream) {
@@ -852,6 +840,18 @@ function draw() {
             context.drawImage(playerStream.element, videoScaledX, videoScaledY, videoScaledWidth, videoScaledHeight);
             context.restore();
         }
+
+        // Draw the number of units
+        context.font = '20px Arial';
+        context.fillStyle = 'black';
+        context.textAlign = 'center';
+        context.fillText(parseInt(base.units), x, y + radius + 20);
+
+        // Draw the training rate
+        context.font = '15px Arial';
+        context.fillStyle = 'white';
+        context.textAlign = 'center';
+        context.fillText('+' + base.trainingRate.toFixed(1), x - 3, y + 5);
     });
 
     game_state.units.forEach((unit) => {
@@ -939,6 +939,12 @@ function startGame(game_options) {
     if (isHost()) {
         controlledPlayerId = 0;
         initGame(game_options);
+    }
+    else // init client
+    {
+        if (cameraCheckbox.checked) {
+            startCamera(controlledPlayerId);
+        }
     }
 
     drawBackground();

@@ -13,10 +13,10 @@ const basesSliderLabel = document.getElementById('numBasesValue');
 const gameSpeedSlider = document.getElementById('gameSpeedSlider');
 const gameSpeedLabel = document.getElementById('gameSpeedValue');
 const roadsCheckbox = document.getElementById('roadsCheckbox');
+const cameraCheckbox = document.getElementById('cameraCheckbox');
 const musicCheckbox = document.getElementById('musicCheckbox');
 const playAgainButton = document.getElementById('playAgainButton');
 let endCreditsAudio = null;
-
 
 
 aiSlider.oninput = () => {
@@ -67,6 +67,7 @@ function switchStage(hideStageId, showStageId) {
 // ----- GAME -----
 
 let localPlayerId = null;
+let hosted_game_options = null;
 
 function isHost() {
     return localPlayerId == 0;
@@ -93,7 +94,8 @@ function getPeerPlayerIndex(peerId) {
 
 function startSinglePlayerGame() {
     localPlayerId = 0;
-    startGame(getGameOptions());
+    hosted_game_options = getGameOptions();
+    startGame(hosted_game_options);
 }
 
 // ----- CONNECTIONS -----
@@ -142,15 +144,20 @@ function hostGame() {
     });
 
     peer.on('call', function(call) {
-        getUserMedia({video: true, audio: true},
-            function(stream) {
-                registerPlayerStream(localPlayerId, stream, true);
-                answerCall(call, stream);
-            },
-            function(err) {
-                console.log('Failed to get local stream', err);
-            }
-        );
+        if (cameraCheckbox.checked) {
+            getUserMedia({video: true, audio: true},
+                function(stream) {
+                    registerPlayerStream(localPlayerId, stream, true);
+                    answerCall(call, stream);
+                },
+                function(err) {
+                    console.log('Failed to get local stream', err);
+                }
+            );
+        }
+        else {
+            answerCall(call, null);
+        }
     });
 
     switchStage('hostStage', 'pendingStage');
@@ -306,14 +313,15 @@ function setupConnection(connection, is_host) {
             let controlId = null;
             if (!isGameStarted()) {
                 switchStage('linkStage', 'gameStage');
-                startGame(getGameOptions());
+                hosted_game_options = getGameOptions();
+                startGame(hosted_game_options);
                 controlId = playerId;
             }
             else {
                 controlId = addPlayer('Player ' + playerId);
             }
             connectedPlayers[playerIndex].controlId = controlId;
-            sendMessage_startGame(playerId, controlId);
+            sendMessage_startGame(playerId, controlId, hosted_game_options);
         }
 
         connection.on('data', (data) => {
