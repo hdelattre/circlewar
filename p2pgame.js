@@ -148,7 +148,7 @@ function hostGame() {
                 answerCall(call, stream);
             },
             function(err) {
-                console.log('Failed to get local stream' ,err);
+                console.log('Failed to get local stream', err);
             }
         );
     });
@@ -181,6 +181,13 @@ function closeConnections() {
         call.close();
     });
     activeCalls = [];
+
+    for (let playerId in playerStreams) {
+        playerStreams[playerId].stream.getTracks().forEach((track) => {
+            track.stop();
+        });
+    }
+    playerStreams = {};
 }
 
 function callPeer(peerId, stream) {
@@ -208,7 +215,7 @@ function startCamera(controlledPlayerId) {
             callPeer(hostConnection.peer, stream);
         },
         function(err) {
-            console.log('Failed to get local stream' ,err);
+            console.log('Failed to get local stream', err);
         }
     );
 }
