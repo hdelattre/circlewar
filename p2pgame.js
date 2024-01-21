@@ -13,6 +13,7 @@ const basesSliderLabel = document.getElementById('numBasesValue');
 const gameSpeedSlider = document.getElementById('gameSpeedSlider');
 const gameSpeedLabel = document.getElementById('gameSpeedValue');
 const roadsCheckbox = document.getElementById('roadsCheckbox');
+const musicCheckbox = document.getElementById('musicCheckbox');
 const playAgainButton = document.getElementById('playAgainButton');
 let endCreditsAudio = null;
 
@@ -222,16 +223,18 @@ function gameOver(winnerId, winnerName, winnerColor) {
     gameOverText.style.color = winnerColor;
     switchStage('gameStage', 'gameOverStage');
 
-    const audioFileIndex = Math.floor(Math.random() * 2);
-    const audioFileSuffix = audioFileIndex == 0 ? '' : ' 2';
-    const audioFileName = 'assets/Lost Heroes of the Circle War' + audioFileSuffix + '.mp3';
-    endCreditsAudio = new Audio(audioFileName);
-    endCreditsAudio.addEventListener('canplaythrough', () => {
-        endCreditsAudio.volume = 0.04;
-        endCreditsAudio.loop = true;
-        endCreditsAudio.play();
-    });
-    endCreditsAudio.load();
+    if (musicCheckbox.checked) {
+        const audioFileIndex = Math.floor(Math.random() * 2);
+        const audioFileSuffix = audioFileIndex == 0 ? '' : ' 2';
+        const audioFileName = 'assets/Lost Heroes of the Circle War' + audioFileSuffix + '.mp3';
+        endCreditsAudio = new Audio(audioFileName);
+        endCreditsAudio.addEventListener('canplaythrough', () => {
+            endCreditsAudio.volume = 0.04;
+            endCreditsAudio.loop = true;
+            endCreditsAudio.play();
+        });
+        endCreditsAudio.load();
+    }
 }
 
 // Display copy link button and setup click event

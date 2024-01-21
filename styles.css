@@ -81,7 +81,7 @@ label {
     color: #333333;
 }
 
-#roadsCheckbox {
+input[type="checkbox"] {
     appearance: none; /* Remove default checkbox appearance */
     width: 20px; /* Set checkbox width */
     height: 20px; /* Set checkbox height */
@@ -93,12 +93,12 @@ label {
     vertical-align: middle; /* Adjust vertical alignment */
 }
 
-#roadsCheckbox:checked {
+input[type="checkbox"]:checked {
     background-color: #007bff; /* Change background color when checkbox is checked */
     border-color: #007bff; /* Change border color when checkbox is checked */
 }
 
-#roadsCheckbox:focus {
+input[type="checkbox"]:focus {
     outline: none; /* Remove focus outline */
     box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.3); /* Add focus outline */
 }
