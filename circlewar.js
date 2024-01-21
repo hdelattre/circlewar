@@ -886,6 +886,19 @@ function draw() {
             context.clip();
             context.drawImage(playerStream.element, videoScaledX, videoScaledY, videoScaledWidth, videoScaledHeight);
             context.restore();
+
+            // Draw the training rate above circle to not overlap video
+            context.font = '15px Arial';
+            context.fillStyle = 'black';
+            context.textAlign = 'center';
+            context.fillText('+' + base.trainingRate.toFixed(1), x - 3, y - 24);
+        }
+        else {
+            // Draw the training rate inside circle
+            context.font = '15px Arial';
+            context.fillStyle = 'white';
+            context.textAlign = 'center';
+            context.fillText('+' + base.trainingRate.toFixed(1), x - 3, y + 5);
         }
 
         // Draw the number of units
@@ -893,12 +906,6 @@ function draw() {
         context.fillStyle = 'black';
         context.textAlign = 'center';
         context.fillText(parseInt(base.units), x, y + radius + 20);
-
-        // Draw the training rate
-        context.font = '15px Arial';
-        context.fillStyle = 'white';
-        context.textAlign = 'center';
-        context.fillText('+' + base.trainingRate.toFixed(1), x - 3, y + 5);
     });
 
     game_state.units.forEach((unit) => {
