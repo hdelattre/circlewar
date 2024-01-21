@@ -15,6 +15,7 @@ const gameSpeedLabel = document.getElementById('gameSpeedValue');
 const roadsCheckbox = document.getElementById('roadsCheckbox');
 const cameraCheckbox = document.getElementById('cameraCheckbox');
 const musicCheckbox = document.getElementById('musicCheckbox');
+const gameSeedText = document.getElementById('gameSeedText');
 const playAgainButton = document.getElementById('playAgainButton');
 let endCreditsAudio = null;
 
@@ -153,6 +154,7 @@ function isHost() {
 
 function getGameOptions() {
     return {
+        seed: gameSeedText.value,
         num_ai_players: aiSlider.value,
         num_bases: basesSlider.value,
         roads_enabled: roadsCheckbox.checked,

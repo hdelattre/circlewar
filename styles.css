@@ -59,7 +59,7 @@ input[type=range] {
     margin: 20px 0; /* Space above and below sliders */
 }
 
-#joinCodeInput {
+input[type="text"] {
     padding: 10px; /* Add padding to the input */
     font-size: 1em; /* Adjust font size */
     border: 1px solid #ccc; /* Add a border */
@@ -68,7 +68,7 @@ input[type=range] {
     transition: border-color 0.3s, box-shadow 0.3s; /* Smooth transition for border and shadow */
 }
 
-#joinCodeInput:focus {
+input[type="text"]:focus {
     outline: none; /* Remove focus outline */
     border-color: #007bff; /* Change border color on focus */
     box-shadow: 0 2px 4px rgba(0,0,0,0.4); /* Increase shadow on focus */
@@ -170,5 +170,7 @@ input[type="checkbox"]:focus {
     opacity: 0;
     pointer-events: none;
     position: absolute;
+    width: 1px;
+    height: 1px;
     z-index: -100;
 }

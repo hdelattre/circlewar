@@ -25,13 +25,17 @@ const playerSlots = [
 const baseRadius = 20;
 
 // ------ GAME STATE ------
+let game_config = {
+    seed: 0,
+    bases: [],
+    roads: [],
+    roads_only: true,
+}
 let game_state = {
     time: 0,
     speed: 1,
-    roads_only: true,
     players: [],
-    bases: [],
-    roads: [],
+    base_owners: [],
     units: [],
 }
 
@@ -41,14 +45,28 @@ let ai_controllers = [];
 
 function initGame(game_options) {
 
+    game_config = {
+        seed: game_options.seed,
+        bases: [],
+        roads: [],
+        roads_only: game_options.roads_enabled,
+    }
+
+    // Init seed
+    if (game_config.seed < 0) {
+        random = Math.random;
+    }
+    else {
+        seededRandom = new SeededRandom(game_config.seed);
+        random = seededRandom.next.bind(seededRandom);
+    }
+
     // Reset game state
     game_state = {
         time: 0,
         speed: game_options.game_speed,
-        roads_only: game_options.roads_enabled,
         players: [],
-        bases: [],
-        roads: [],
+        base_owners: [],
         units: [],
     };
     ai_controllers = [];
@@ -57,24 +75,23 @@ function initGame(game_options) {
     const num_bases = game_options.num_bases;
     for (let i = 0; i < num_bases; i++) {
         const newBase = {
-            baseid: game_state.bases.length,
-            ownerid: -1,
+            id: game_config.bases.length,
             units: 10,
-            trainingRate: .2 + Math.random(),
+            trainingRate: .2 + random(),
             unittype: UNIT_SOLDIER,
-            location: getRandomLocation(baseRadius + 10, game_state.bases)
+            location: getRandomLocation(baseRadius + 10, game_config.bases)
         };
-        addBase(newBase);
+        addBase(newBase, -1);
     }
 
     // Init roads
-    if (game_state.roads_only) {
-        game_state.bases.forEach((base) => {
-            const num_roads = Math.floor(Math.random() * 3) + 1;
+    if (game_config.roads_only) {
+        game_config.bases.forEach((base) => {
+            const num_roads = Math.floor(random() * 3) + 1;
             for (let i = 0; i < num_roads; i++) {
-                const closestBase = game_state.bases.reduce((prev, curr) => {
-                    if (base.baseid == curr.baseid) return prev;
-                    const existing_road = game_state.roads[base.baseid].find((road) => { return road == curr.baseid });
+                const closestBase = game_config.bases.reduce((prev, curr) => {
+                    if (base.id == curr.id) return prev;
+                    const existing_road = game_config.roads[base.id].find((road) => { return road == curr.id });
                     if (existing_road) return prev;
                     if (getDistance(base.location, prev.location) < getDistance(base.location, curr.location)) {
                         return prev;
@@ -117,8 +134,8 @@ function addPlayer(name) {
     let player = playerSlots[playerIndex];
     player.name = name;
     game_state.players.push(player);
-    unowned_bases = game_state.bases.filter((base) => {
-        return base.ownerid < 0;
+    unowned_bases = game_config.bases.filter((base) => {
+        return getBaseOwner(base.id) < 0;
     });
     assignStartBase(getRandomElement(unowned_bases), player.id);
     return playerIndex;
@@ -133,30 +150,35 @@ function addAIPlayer(name) {
     });
 }
 
-function addBase(base) {
-    game_state.bases.push(base);
-    game_state.roads.push([]);
+function addBase(base, ownerid) {
+    game_config.bases.push(base);
+    game_config.roads.push([]);
+    game_state.base_owners.push(ownerid);
 }
 
 function addRoad(startBase, endBase) {
-    game_state.roads[startBase.baseid].push(endBase.baseid);
-    game_state.roads[endBase.baseid].push(startBase.baseid);
+    game_config.roads[startBase.id].push(endBase.id);
+    game_config.roads[endBase.id].push(startBase.id);
 }
 
 function assignStartBase(base, playerid) {
-    base.ownerid = playerid;
+    game_state.base_owners[base.id] = playerid;
     base.units = 20;
     base.trainingRate = 1;
 }
 
+function getBaseOwner(id) {
+    return game_state.base_owners[id];
+}
+
 function canSendUnits(startBaseId, endBaseId) {
-    return !game_state.roads_only || game_state.roads[startBaseId].indexOf(endBaseId) >= 0;
+    return !game_config.roads_only || game_config.roads[startBaseId].indexOf(endBaseId) >= 0;
 }
 
 function input_sendUnits(controlId, startBaseId, endBaseId, numUnits) {
-    const startBase = game_state.bases[startBaseId];
-    const endBase = game_state.bases[endBaseId];
-    if (startBase.ownerid != controlId) return;
+    const startBase = game_config.bases[startBaseId];
+    const endBase = game_config.bases[endBaseId];
+    if (getBaseOwner(startBaseId) != controlId) return;
     // if (startBase.units < numUnits) return;
     if (!canSendUnits(startBaseId, endBaseId)) return;
     sendUnits(startBase, endBase, numUnits);
@@ -196,10 +218,10 @@ function sendUnits(startBase, endBase, numUnits) {
             const unitY = startY + row * unitSpacing * Math.sqrt(3) / 2;
 
             const unit = {
-                ownerid: startBase.ownerid,
+                ownerid: getBaseOwner(startBase.id),
                 location: { x: unitX, y: unitY },
                 unittype: startBase.unittype,
-                targetid: endBase.baseid
+                targetid: endBase.id
             };
             spawnedUnits.push(unit);
             game_state.units.push(unit);
@@ -212,20 +234,21 @@ function sendUnits(startBase, endBase, numUnits) {
 function updateUnits(units, deltaTime, allow_capture = true) {
     const newUnits = [];
     units.forEach((unit) => {
-        const targetBase = game_state.bases[unit.targetid];
+        const targetBase = game_config.bases[unit.targetid];
         const distance = getDistance(targetBase.location, unit.location);
         const unitinfo = unittypes[unit.unittype];
         const progress = unitinfo.speed * deltaTime;
         if (distance <= progress) {
             unit.location = targetBase.location;
             if (allow_capture) {
-                if (targetBase.ownerid == unit.ownerid) {
+                const ownerid = getBaseOwner(targetBase.id);
+                if (ownerid == unit.ownerid) {
                     targetBase.units += 1;
                 } else {
                     targetBase.units -= 1;
                     if (targetBase.units < 0) {
                         targetBase.units = -targetBase.units;
-                        targetBase.ownerid = unit.ownerid;
+                        game_state.base_owners[targetBase.id] = unit.ownerid;
                     }
                 }
             }
@@ -269,7 +292,7 @@ const selectHoverTime = 0.4;
 let selectedBases = [];
 
 function canDragBase(base) {
-    return base.ownerid === controlledPlayerId;
+    return getBaseOwner(base.id) === controlledPlayerId;
 }
 function getMouseLocation(event) {
     const inputX = event.clientX || event.touches[0].clientX;
@@ -321,7 +344,7 @@ function resetDragging() {
 }
 
 function input_clickLocation(location) {
-    const selectedBase = game_state.bases.find((base) => {
+    const selectedBase = game_config.bases.find((base) => {
         if (!canDragBase(base)) return false;
         return getDistance(location, base.location) <= getBaseSelectRadius(base);
     });
@@ -330,7 +353,7 @@ function input_clickLocation(location) {
         resetDragging();
         dragStartBase = selectedBase;
         isDragging = true;
-        selectedBases.push(dragStartBase.baseid);
+        selectedBases.push(dragStartBase.id);
     }
 }
 
@@ -342,8 +365,8 @@ function input_hoverLocation(location) {
     }
 
     if (!hoveredBase) {
-        hoveredBase = hoveredBase || game_state.bases.find((base) => {
-            if (base.ownerid != dragStartBase.ownerid) return false;
+        hoveredBase = hoveredBase || game_config.bases.find((base) => {
+            if (getBaseOwner(base.id) != getBaseOwner(dragStartBase.id)) return false;
             return getDistance(location, base.location) <= getBaseSelectRadius(base);
         });
         hoveredTime = 0;
@@ -360,17 +383,17 @@ function input_releaseLocation(location) {
         return;
     }
 
-    dragEndBase = game_state.bases.find((base) => {
+    dragEndBase = game_config.bases.find((base) => {
         return getDistance(location, base.location) <= getBaseSelectRadius(base);
     });
 
     if (dragStartBase && dragEndBase) {
-        selectedBases.forEach((baseid) => {
-            if (game_state.bases[baseid].ownerid != dragStartBase.ownerid) return;
-            if (baseid == dragEndBase.baseid) return;
-            const base = game_state.bases[baseid];
+        selectedBases.forEach((id) => {
+            if (getBaseOwner(id) != getBaseOwner(dragStartBase.id)) return;
+            if (id == dragEndBase.id) return;
+            const base = game_config.bases[id];
             const unitCount = Math.floor(base.units);
-            input_sendUnits(controlledPlayerId, baseid, dragEndBase.baseid, unitCount);
+            input_sendUnits(controlledPlayerId, id, dragEndBase.id, unitCount);
         });
     }
 
@@ -385,10 +408,28 @@ function getDistance(locA, locB) {
     return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 }
 
+// only use this random function, as it may be replaced with a seeded random
+let random = Math.random;
+let seededRandom = null;
+
+function SeededRandom(seed) {
+    this.seed = seed;
+    this.next = function() {
+        // Constants for the LCG algorithm
+        var a = 1664525;
+        var c = 1013904223;
+        var m = Math.pow(2, 32);
+
+        // Update the seed
+        this.seed = (a * this.seed + c) % m;
+        return this.seed / m;
+    };
+}
+
 function getRandomLocation(margin = 0, existing_locations = []) {
     let location = {
-        x: Math.random() * (canvas.width - margin * 2) + margin,
-        y: Math.random() * (canvas.height - margin * 2) + margin
+        x: random() * (canvas.width - margin * 2) + margin,
+        y: random() * (canvas.height - margin * 2) + margin
     };
 
     if (existing_locations.length > 0) {
@@ -397,8 +438,8 @@ function getRandomLocation(margin = 0, existing_locations = []) {
                 return getDistance(location, existing_location.location) < (baseRadius * 2 + margin);
             });
             if (overlapping_location) {
-                location.x = Math.random() * (canvas.width - margin * 2) + margin;
-                location.y = Math.random() * (canvas.height - margin * 2) + margin;
+                location.x = random() * (canvas.width - margin * 2) + margin;
+                location.y = random() * (canvas.height - margin * 2) + margin;
             }
             else {
                 break;
@@ -410,7 +451,7 @@ function getRandomLocation(margin = 0, existing_locations = []) {
 }
 
 function getRandomElement(arr) {
-    return arr[Math.floor(Math.random() * arr.length)];
+    return arr[Math.floor(random() * arr.length)];
 }
 
 function makeColorTranslucent(color, opacity) {
@@ -451,13 +492,14 @@ function handleMessage(message) {
     const messageType = message.type;
     const data = message.data;
     if (messageType == MESSAGE_UNITSMOVED) {
-        const sentUnits = sendUnits(game_state.bases[data.baseid], game_state.bases[data.targetid], data.units)
+        const sentUnits = sendUnits(game_config.bases[data.id], game_config.bases[data.targetid], data.units)
         updateUnits(sentUnits, game_state.time - data.time, false)
     }
     else if (messageType == MESSAGE_GAMESTATE) {
         updateGameState(data.game_state);
     }
     else if (messageType == MESSAGE_STARTGAME) {
+        game_config = data.game_config;
         updateGameState(data.game_state);
         if (!isGameStarted()) {
             localPlayerId = data.playerid;
@@ -485,7 +527,7 @@ function sendMessage_SendUnits(startBaseId, endBaseId, numUnits) {
         type: MESSAGE_UNITSMOVED,
         data: {
             time: game_state.time,
-            baseid: startBaseId,
+            id: startBaseId,
             targetid: endBaseId,
             units: numUnits,
         }
@@ -500,6 +542,7 @@ function sendMessage_startGame(playerid, controlid, game_options) {
             controlid: controlid,
             game_state: game_state,
             game_options: game_options,
+            game_config: game_config,
         }
     });
 }
@@ -520,33 +563,34 @@ function gatherAIState(ai_controller, ownedBases, neutralBases) {
     let ai_state = {
         playerBases: [],
         enemyBases: [],
-        neutralBases: game_state.roads_only ? [] : neutralBases,
+        neutralBases: game_config.roads_only ? [] : neutralBases,
         playerUnits: [],
         enemyUnits: [],
     };
 
     ownedBases.forEach((base) => {
-        if (base.ownerid == playerid) {
+        if (getBaseOwner(base.id) == playerid) {
             ai_state.playerBases.push(base);
 
-        } else if (!game_state.roads_only) {
+        } else if (!game_config.roads_only) {
             ai_state.enemyBases.push(base);
         }
     });
 
-    if (game_state.roads_only) {
+    if (game_config.roads_only) {
         ai_state.playerBases.forEach((base) => {
-            const roadBases = game_state.roads[base.baseid].map((roadid) => {
-                return game_state.bases[roadid];
+            const roadBases = game_config.roads[base.id].map((roadid) => {
+                return game_config.bases[roadid];
             });
             roadBases.forEach((roadBase) => {
-                if (roadBase.ownerid == playerid) return;
-                if (roadBase.ownerid < 0) {
-                    if (ai_state.neutralBases.find((neutralBase) => neutralBase.baseid == roadBase.baseid)) return;
+                const ownerid = getBaseOwner(roadBase.id);
+                if (ownerid == playerid) return;
+                if (ownerid < 0) {
+                    if (ai_state.neutralBases.find((neutralBase) => neutralBase.id == roadBase.id)) return;
                     ai_state.neutralBases.push(roadBase);
                 }
                 else {
-                    if (ai_state.enemyBases.find((enemyBase) => enemyBase.baseid == roadBase.baseid)) return;
+                    if (ai_state.enemyBases.find((enemyBase) => enemyBase.id == roadBase.id)) return;
                     ai_state.enemyBases.push(roadBase);
                 }
             });
@@ -568,25 +612,25 @@ function updateAI_reinforceBases(ai_controller, ai_state) {
     for (i = 0, n = ai_state.playerBases.length; i < n; i++) {
         const base = ai_state.playerBases[i];
         if (base.units < 10) continue;
-        const adjacentBases = game_state.roads[base.baseid].map((roadid) => { return game_state.bases[roadid]; });
-        const adjacentUnowned = adjacentBases.find((adjacentBase) => { return adjacentBase.ownerid < 0 || adjacentBase.ownerid != base.ownerid; });
+        const adjacentBases = game_config.roads[base.id].map((roadid) => { return game_config.bases[roadid]; });
+        const adjacentUnowned = adjacentBases.find((adjacentBase) => { return getBaseOwner(adjacentBase.id) < 0 || getBaseOwner(adjacentBase.id) != getBaseOwner(base.id); });
         if (adjacentUnowned != null) continue;
         let lastNumAdjacent = 0;
         const friendlyBase = ai_state.playerBases.length <= 1 ? null : ai_state.playerBases.reduce((prev, curr) => {
-            if (base.baseid == curr.baseid) return prev;
-            if (!canSendUnits(base.baseid, curr.baseid)) return prev;
-            const numAdjacent = game_state.roads[base.baseid].filter((roadid) => { return game_state.bases[roadid].ownerid != curr.ownerid; }).length;
+            if (base.id == curr.id) return prev;
+            if (!canSendUnits(base.id, curr.id)) return prev;
+            const numAdjacent = game_config.roads[base.id].filter((roadid) => { return getBaseOwner(roadid) != getBaseOwner(curr.id); }).length;
             if (numAdjacent < lastNumAdjacent) return prev;
             lastNumAdjacent = numAdjacent;
             return prev.units < curr.units ? prev : curr;
         });
         if (friendlyBase == null) continue;
-        const enemyTargeting = ai_state.enemyUnits.filter((unit) => unit.targetid == base.baseid);
-        const friendlyTargeting = ai_state.enemyUnits.filter((unit) => unit.targetid == base.baseid);
+        const enemyTargeting = ai_state.enemyUnits.filter((unit) => unit.targetid == base.id);
+        const friendlyTargeting = ai_state.enemyUnits.filter((unit) => unit.targetid == base.id);
         const adjustedUnits = friendlyBase.units - enemyTargeting.length + friendlyTargeting.length;
         if (adjustedUnits <= 5 && base.units >= (friendlyBase.units + 5)) {
             const sendUnitCount = Math.floor(base.units);
-            input_sendUnits(ai_controller.controlid, base.baseid, friendlyBase.baseid, sendUnitCount);
+            input_sendUnits(ai_controller.controlid, base.id, friendlyBase.id, sendUnitCount);
             return;
         }
     }
@@ -598,9 +642,9 @@ function updateAI_greedyExpand(ai_controller, ai_state) {
         const base = ai_state.playerBases[i];
         if (base.units < 10) continue;
         function canTargetNeutralBase(targetBase) {
-            if (!canSendUnits(base.baseid, targetBase.baseid)) return false;
-            if (ai_state.playerUnits.find((unit) => unit.targetid == targetBase.baseid)) return false;
-            if (ai_state.enemyUnits.find((unit) => unit.targetid == targetBase.baseid)) return false;
+            if (!canSendUnits(base.id, targetBase.id)) return false;
+            if (ai_state.playerUnits.find((unit) => unit.targetid == targetBase.id)) return false;
+            if (ai_state.enemyUnits.find((unit) => unit.targetid == targetBase.id)) return false;
             return true;
         }
         const neutralBase = ai_state.neutralBases.length <= 0 ? null : ai_state.neutralBases.reduce((prev, curr) => {
@@ -610,7 +654,7 @@ function updateAI_greedyExpand(ai_controller, ai_state) {
         });
         if (neutralBase && base.units >= (neutralBase.units + 3)) {
             const sendUnitCount = Math.floor(base.units);
-            input_sendUnits(ai_controller.controlid, base.baseid, neutralBase.baseid, sendUnitCount);
+            input_sendUnits(ai_controller.controlid, base.id, neutralBase.id, sendUnitCount);
             return;
         }
     }
@@ -622,9 +666,9 @@ function updateAI_attackExpand(ai_controller, ai_state) {
         const base = ai_state.playerBases[i];
         if (base.units < 10) continue;
         function canTargetNeutralBase(targetBase) {
-            if (!canSendUnits(base.baseid, targetBase.baseid)) return false;
-            if (ai_state.playerUnits.find((unit) => unit.targetid == targetBase.baseid)) return false;
-            if (ai_state.enemyUnits.find((unit) => unit.targetid == targetBase.baseid)) return false;
+            if (!canSendUnits(base.id, targetBase.id)) return false;
+            if (ai_state.playerUnits.find((unit) => unit.targetid == targetBase.id)) return false;
+            if (ai_state.enemyUnits.find((unit) => unit.targetid == targetBase.id)) return false;
             return true;
         }
         const neutralBase = ai_state.neutralBases.length <= 0 ? null : ai_state.neutralBases.reduce((prev, curr) => {
@@ -634,8 +678,8 @@ function updateAI_attackExpand(ai_controller, ai_state) {
         });
 
         function canTargetEnemyBase(targetBase) {
-            if (!canSendUnits(base.baseid, targetBase.baseid)) return false;
-            if (ai_state.playerUnits.find((unit) => unit.targetid == targetBase.baseid)) return false;
+            if (!canSendUnits(base.id, targetBase.id)) return false;
+            if (ai_state.playerUnits.find((unit) => unit.targetid == targetBase.id)) return false;
             return true;
         }
         const enemyBase = ai_state.enemyBases.length <= 0 ? null : ai_state.enemyBases.reduce((prev, curr) => {
@@ -646,12 +690,12 @@ function updateAI_attackExpand(ai_controller, ai_state) {
         });
         if (enemyBase && base.units >= (enemyBase.units + 15)) {
             const sendUnitCount = Math.floor(base.units);
-            input_sendUnits(ai_controller.controlid, base.baseid, enemyBase.baseid, sendUnitCount);
+            input_sendUnits(ai_controller.controlid, base.id, enemyBase.id, sendUnitCount);
             return;
         }
         else if (neutralBase && base.units >= (neutralBase.units + 3)) {
             const sendUnitCount = Math.floor(base.units);
-            input_sendUnits(ai_controller.controlid, base.baseid, neutralBase.baseid, sendUnitCount);
+            input_sendUnits(ai_controller.controlid, base.id, neutralBase.id, sendUnitCount);
             return;
         }
     }
@@ -663,8 +707,8 @@ function updateAI_zergRush(ai_controller, ai_state) {
         const base = ai_state.playerBases[i];
         if (base.units < 6) continue;
         function canTargetEnemyBase(targetBase) {
-            if (!canSendUnits(base.baseid, targetBase.baseid)) return false;
-            if (ai_state.playerUnits.find((unit) => unit.targetid == targetBase.baseid)) return false;
+            if (!canSendUnits(base.id, targetBase.id)) return false;
+            if (ai_state.playerUnits.find((unit) => unit.targetid == targetBase.id)) return false;
             return true;
         };
         const enemyBase = ai_state.enemyBases.length <= 0 ? null : ai_state.enemyBases.reduce((prev, curr) => {
@@ -675,7 +719,7 @@ function updateAI_zergRush(ai_controller, ai_state) {
         });
         if (enemyBase) {
             const sendUnitCount = Math.floor(base.units);
-            input_sendUnits(ai_controller.controlid, base.baseid, enemyBase.baseid, sendUnitCount);
+            input_sendUnits(ai_controller.controlid, base.id, enemyBase.id, sendUnitCount);
             return;
         }
     }
@@ -702,7 +746,7 @@ function aiStrategy_normal(ai_controller, ai_state, deltaTime) {
 
     aiUpdateFunction(ai_controller, ai_state);
 
-    if (game_state.roads_only) {
+    if (game_config.roads_only) {
         updateAI_reinforceBases(ai_controller, ai_state, deltaTime);
     }
 }
@@ -715,9 +759,9 @@ function updateState(deltaTime) {
 
     if (selectedBases.length > 0) {
         let newSelectedBases = [];
-        selectedBases.forEach((baseid) => {
-            if (game_state.bases[baseid].ownerid == controlledPlayerId) {
-                newSelectedBases.push(baseid);
+        selectedBases.forEach((id) => {
+            if (getBaseOwner(id) == controlledPlayerId) {
+                newSelectedBases.push(id);
             }
         });
         selectedBases = newSelectedBases;
@@ -725,14 +769,14 @@ function updateState(deltaTime) {
 
     if (hoveredBase) {
         hoveredTime += deltaTime;
-        if (hoveredTime >= selectHoverTime && selectedBases.indexOf(hoveredBase.baseid) < 0) {
-            selectedBases.push(hoveredBase.baseid);
+        if (hoveredTime >= selectHoverTime && selectedBases.indexOf(hoveredBase.id) < 0) {
+            selectedBases.push(hoveredBase.id);
             hoveredBase = null;
         }
     }
 
-    game_state.bases.forEach((base) => {
-        if (base.ownerid < 0 && base.units >= 10) return;
+    game_config.bases.forEach((base) => {
+        if (getBaseOwner(base.id) < 0 && base.units >= 10) return;
         base.units += base.trainingRate * deltaTime;
     });
 
@@ -743,8 +787,8 @@ function updateState(deltaTime) {
         // AI update
         let ownedBases = [];
         let neutralBases = [];
-        game_state.bases.forEach((base) => {
-            if (base.ownerid < 0) {
+        game_config.bases.forEach((base) => {
+            if (getBaseOwner(base.id) < 0) {
                 neutralBases.push(base);
             } else {
                 ownedBases.push(base);
@@ -757,13 +801,14 @@ function updateState(deltaTime) {
 
         // Check for game over
         let winner = null;
-        for (let i = 0, n = game_state.bases.length; i < n; i++) {
-            const base = game_state.bases[i];
-            if (base.ownerid < 0) continue;
+        for (let i = 0, n = game_config.bases.length; i < n; i++) {
+            const base = game_config.bases[i];
+            const ownerid = getBaseOwner(base.id);
+            if (ownerid < 0) continue;
             if (winner == null) {
-                winner = base.ownerid;
+                winner = ownerid;
             }
-            else if (winner != base.ownerid) {
+            else if (winner != ownerid) {
                 winner = null;
                 break;
             }
@@ -792,11 +837,12 @@ function draw() {
     // Draw the cached background onto the main canvas
     context.drawImage(offscreenCanvas, 0, 0);
 
-    game_state.roads.forEach((roads, baseid) => {
-        const base = game_state.bases[baseid];
+    game_config.roads.forEach((roads, id) => {
+        const base = game_config.bases[id];
         roads.forEach((roadid) => {
-            const roadBase = game_state.bases[roadid];
-            const roadColor = base.ownerid == roadBase.ownerid ? getPlayerColor(roadBase.ownerid) : 'gray';
+            const roadBase = game_config.bases[roadid];
+            const roadOwner = getBaseOwner(roadBase.id);
+            const roadColor = getBaseOwner(base.id) == roadOwner ? getPlayerColor(roadOwner) : 'gray';
             context.beginPath();
             context.strokeStyle = makeColorTranslucent(roadColor, 0.5);
             context.lineWidth = 5;
@@ -808,18 +854,19 @@ function draw() {
     });
 
     // Render game objects
-    game_state.bases.forEach((base) => {
+    game_config.bases.forEach((base) => {
         const { x, y } = base.location; // Get the x and y coordinates from the base's location
+        const ownerid = getBaseOwner(base.id);
         const radius = baseRadius;
 
         // Draw the base circle
         context.beginPath();
         context.arc(x, y, radius, 0, 2 * Math.PI);
-        context.fillStyle = getPlayerColor(base.ownerid);
+        context.fillStyle = getPlayerColor(ownerid);
         context.fill();
 
         // Draw the player's stream image
-        const playerStream = playerStreams[base.ownerid];
+        const playerStream = playerStreams[ownerid];
         if (playerStream) {
             const videoRadius = radius - 2; // Leave a small color border around the video
             const videoTrack = playerStream.stream.getVideoTracks()[0];
@@ -867,9 +914,9 @@ function draw() {
     });
 
     if (isDragging && dragStartBase && dragLocation) {
-        selectedBases.forEach((baseid) => {
-            const base = game_state.bases[baseid];
-            const baseColor = getPlayerColor(dragStartBase.ownerid);
+        selectedBases.forEach((id) => {
+            const base = game_config.bases[id];
+            const baseColor = getPlayerColor(getBaseOwner(dragStartBase.id));
             // Draw line from start base to mouse location
             context.beginPath();
             context.strokeStyle = makeColorTranslucent(baseColor, 0.5)
