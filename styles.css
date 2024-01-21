@@ -165,3 +165,10 @@ label {
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
     z-index: 1;
 }
+
+#streamsContainer video {
+    visibility: hidden;
+    position: absolute;
+    height: 1px;
+    width: 1px;
+}

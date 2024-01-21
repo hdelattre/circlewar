@@ -16,6 +16,8 @@ const roadsCheckbox = document.getElementById('roadsCheckbox');
 const playAgainButton = document.getElementById('playAgainButton');
 let endCreditsAudio = null;
 
+
+
 aiSlider.oninput = () => {
     aiSliderLabel.textContent = aiSlider.value;
 };
@@ -82,6 +84,12 @@ function getNumConnectedPlayers() {
     return connectedPlayers.length + 1;
 }
 
+function getPeerPlayerIndex(peerId) {
+    return connectedPlayers.findIndex((player) => {
+        return player.connection.peer.id == peerId;
+    });
+};
+
 function startSinglePlayerGame() {
     localPlayerId = 0;
     startGame(getGameOptions());
@@ -93,15 +101,29 @@ let peer = null;
 let hostConnection = null;
 let connections = [];
 let connectedPlayers = [];
+let playerStreams = {};
+let activeCalls = [];
+
+const getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
 
 function registerConnectedPlayer(connection) {
     const playerId = connectedPlayers.length + 1;
     connectedPlayers.push({
         connection: connection,
         id: playerId,
-        name: 'Player ' + playerId
+        name: 'Player ' + playerId,
+        controlId: null,
     });
-    return playerId;
+    return connectedPlayers.length - 1;
+}
+
+function registerPlayerStream(playerId, stream, is_local) {
+    const streamElement = document.createElement('video');
+    streamElement.autoplay = true;
+    streamElement.muted = is_local;
+    streamElement.srcObject = stream;
+    playerStreams[playerId] = { stream: stream, element: streamElement };
+    document.getElementById('streamsContainer').appendChild(streamElement);
 }
 
 function hostGame() {
@@ -118,6 +140,18 @@ function hostGame() {
         setupConnection(connection, true);
     });
 
+    peer.on('call', function(call) {
+        getUserMedia({video: true, audio: true},
+            function(stream) {
+                registerPlayerStream(localPlayerId, stream, true);
+                answerCall(call, stream);
+            },
+            function(err) {
+                console.log('Failed to get local stream' ,err);
+            }
+        );
+    });
+
     switchStage('hostStage', 'pendingStage');
 }
 
@@ -132,7 +166,56 @@ function joinGame(peerId) {
     switchStage('hostStage', 'pendingStage');
 }
 
+function closeConnections() {
+    if (hostConnection) {
+        hostConnection.close();
+        hostConnection = null;
+    }
+    connections.forEach((connection) => {
+        connection.close();
+    });
+    connections = [];
+
+    activeCalls.forEach((call) => {
+        call.close();
+    });
+    activeCalls = [];
+}
+
+function callPeer(peerId, stream) {
+    const call = peer.call(peerId, stream);
+    call.on('stream', function(remoteStream) {
+        registerPlayerStream(0, remoteStream, false);
+    });
+    activeCalls.push(call);
+}
+
+function answerCall(call, stream) {
+    call.answer(stream);
+    call.on('stream', function(remoteStream) {
+        const playerIndex = getPeerPlayerIndex(call.peer.id);
+        const controlId = connectedPlayers[playerIndex].controlId;
+        registerPlayerStream(controlId, remoteStream, false);
+    });
+    activeCalls.push(call);
+}
+
+function startCamera(controlledPlayerId) {
+    getUserMedia({video: true, audio: true},
+        function(stream) {
+            registerPlayerStream(controlledPlayerId, stream, true);
+            callPeer(hostConnection.peer, stream);
+        },
+        function(err) {
+            console.log('Failed to get local stream' ,err);
+        }
+    );
+}
+
 function gameOver(winnerId, winnerName, winnerColor) {
+
+    closeConnections();
+
     const gameOverText = document.getElementById('gameOverText');
     const capitalizedColor = winnerColor.charAt(0).toUpperCase() + winnerColor.slice(1);
     gameOverText.textContent = capitalizedColor + ' Wins!';
@@ -208,7 +291,8 @@ function setupConnection(connection, is_host) {
         }
 
         if (is_host) {
-            const playerId = registerConnectedPlayer(connection);
+            const playerIndex = registerConnectedPlayer(connection);
+            const playerId = connectedPlayers[playerIndex].id;
             let controlId = null;
             if (!isGameStarted()) {
                 switchStage('linkStage', 'gameStage');
@@ -218,6 +302,7 @@ function setupConnection(connection, is_host) {
             else {
                 controlId = addPlayer('Player ' + playerId);
             }
+            connectedPlayers[playerIndex].controlId = controlId;
             sendMessage_startGame(playerId, controlId);
         }
 

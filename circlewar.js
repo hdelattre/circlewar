@@ -464,6 +464,7 @@ function handleMessage(message) {
             controlledPlayerId = data.controlid;
             console.log('Joined game as player ' + localPlayerId + ' with control over player ' + controlledPlayerId);
             startGame(getGameOptions());
+            startCamera(controlledPlayerId);
         }
     }
     else if (messageType == MESSAGE_PLAYERWIN) {
@@ -768,8 +769,8 @@ function updateState(deltaTime) {
             }
         }
         if (winner != null) {
-            handlePlayerWin(winner);
             sendMessage_playerWin(winner);
+            handlePlayerWin(winner);
         }
     }
 }
@@ -828,6 +829,29 @@ function draw() {
         context.fillStyle = 'white';
         context.textAlign = 'center';
         context.fillText('+' + base.trainingRate.toFixed(1), x - 3, y + 5);
+
+        // Draw the player's stream image
+        const playerStream = playerStreams[base.ownerid];
+        if (playerStream) {
+            const videoRadius = radius - 2; // Leave a small color border around the video
+            const videoTrack = playerStream.stream.getVideoTracks()[0];
+            const videoSettings = videoTrack.getSettings();
+            const videoWidth = videoSettings.width;
+            const videoHeight = videoSettings.height;
+            const videoZoom = 4; // Adjust the zoom level here
+            const videoScale = Math.min(videoRadius * 2 / videoWidth, videoRadius * 2 / videoHeight) * videoZoom;
+            const videoScaledWidth = videoWidth * videoScale;
+            const videoScaledHeight = videoHeight * videoScale;
+            const videoScaledX = x - videoScaledWidth / 2;
+            const videoScaledY = y - videoScaledHeight / 2;
+
+            context.save();
+            context.beginPath();
+            context.arc(x, y, videoRadius, 0, 2 * Math.PI);
+            context.clip();
+            context.drawImage(playerStream.element, videoScaledX, videoScaledY, videoScaledWidth, videoScaledHeight);
+            context.restore();
+        }
     });
 
     game_state.units.forEach((unit) => {
