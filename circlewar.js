@@ -175,16 +175,6 @@ function canSendUnits(startBaseId, endBaseId) {
     return !game_config.roads_only || game_config.roads[startBaseId].indexOf(endBaseId) >= 0;
 }
 
-function input_sendUnits(controlId, startBaseId, endBaseId, numUnits) {
-    const startBase = game_config.bases[startBaseId];
-    const endBase = game_config.bases[endBaseId];
-    if (getBaseOwner(startBaseId) != controlId) return;
-    // if (startBase.units < numUnits) return;
-    if (!canSendUnits(startBaseId, endBaseId)) return;
-    sendUnits(startBase, endBase, numUnits);
-    sendMessage_SendUnits(startBaseId, endBaseId, numUnits);
-}
-
 function sendUnits(startBase, endBase, numUnits) {
 
     startBase.units -= numUnits;
@@ -436,6 +426,16 @@ function input_releaseLocation(location) {
     }
 
     isDragging = false;
+}
+
+function input_sendUnits(controlId, startBaseId, endBaseId, numUnits) {
+    const startBase = game_config.bases[startBaseId];
+    const endBase = game_config.bases[endBaseId];
+    if (getBaseOwner(startBaseId) != controlId) return;
+    // if (startBase.units < numUnits) return;
+    if (!canSendUnits(startBaseId, endBaseId)) return;
+    sendUnits(startBase, endBase, numUnits);
+    sendMessage_SendUnits(startBaseId, endBaseId, numUnits);
 }
 
 // ------ UTILITY FUNCTIONS ------
