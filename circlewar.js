@@ -852,6 +852,15 @@ function updateState(deltaTime) {
             }
         }
         if (winner != null) {
+            for (let i = 0, n = game_state.units.length; i < n; i++) {
+                const unit = game_state.units[i];
+                if (unit.ownerid != winner) {
+                    winner = null;
+                    break;
+                }
+            }
+        }
+        if (winner != null) {
             sendMessage_playerWin(winner);
             handlePlayerWin(winner);
         }
