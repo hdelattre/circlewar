@@ -272,6 +272,21 @@ function getPlayerColor(playerId) {
 
 let controlledPlayerId = null;
 
+const preventTouchInput = function(event) { event.preventDefault(); };
+function setTouchInputsLockedToGame(inputs_locked) {
+    const options = { passive: false };
+    if (inputs_locked) {
+        document.addEventListener('touchstart', preventTouchInput, options);
+        document.addEventListener('touchmove', preventTouchInput, options);
+        document.documentElement.style.touchAction = 'none';
+    }
+    else {
+        document.removeEventListener('touchstart', preventTouchInput, options);
+        document.removeEventListener('touchmove', preventTouchInput, options);
+        document.documentElement.style.touchAction = 'auto';
+    }
+}
+
 // Touch event handling
 canvas.addEventListener('touchstart', handleMouseDown, { passive: false });
 canvas.addEventListener('touchmove', handleMouseMove, { passive: false });
@@ -991,6 +1006,8 @@ function isGameStarted() {
 function startGame(game_options) {
     if (isGameStarted()) return;
 
+    setTouchInputsLockedToGame(true);
+
     if (isHost()) {
         controlledPlayerId = 0;
         initGame(game_options);
@@ -1011,4 +1028,5 @@ function startGame(game_options) {
 
 function stopGame() {
     lastFrameTime = null;
+    setTouchInputsLockedToGame(false);
 }
