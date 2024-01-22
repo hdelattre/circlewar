@@ -284,7 +284,7 @@ function checkForGestureNav() {
     const usingGestureNav = Math.abs(aspectRatio - screenAspectRatio) > threshold;
 
     if (usingGestureNav) {
-        canvas.style.width = '90%';
+        canvas.style.width = '80%';
     }
     else {
         canvas.style.width = '100%';
