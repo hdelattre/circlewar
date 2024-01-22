@@ -276,6 +276,7 @@ let controlledPlayerId = null;
 canvas.addEventListener('touchstart', handleMouseDown, { passive: false });
 canvas.addEventListener('touchmove', handleMouseMove, { passive: false });
 canvas.addEventListener('touchend', handleTouchUp, { passive: false });
+canvas.addEventListener('touchcancel', handleTouchUp, { passive: false });
 
 canvas.addEventListener('mousedown', handleMouseDown);
 canvas.addEventListener('mousemove', handleMouseMove);
