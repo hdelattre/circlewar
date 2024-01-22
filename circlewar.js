@@ -284,24 +284,30 @@ function checkForGestureNav() {
 // Listen for resize events which might indicate a change in navigation mode
 window.addEventListener('resize', checkForGestureNav);
 
-const preventTouchInput = function(event) { event.preventDefault(); };
+const preventSwipeGesture = function(event) {
+    const touchX = event.touches[0].location;
+    if (touchX < 50 || touchX > window.innerWidth - 50) {
+        event.preventDefault();
+    }
+}
+const preventTouchMove = function(event) { event.preventDefault(); };
+// Disable touch input on the document to prevent scrolling/navigation
 function setTouchInputsLockedToGame(inputs_locked) {
     const options = { passive: false };
     if (inputs_locked) {
-        document.addEventListener('touchstart', preventTouchInput, options);
-        document.addEventListener('touchmove', preventTouchInput, options);
-        document.documentElement.style.touchAction = 'none';
+        document.addEventListener('touchstart', preventSwipeGesture, options);
+        document.addEventListener('touchmove', preventTouchMove, options);
+        //document.documentElement.style.touchAction = 'none';
     }
     else {
-        document.removeEventListener('touchstart', preventTouchInput, options);
-        document.removeEventListener('touchmove', preventTouchInput, options);
-        document.documentElement.style.touchAction = 'auto';
+        document.removeEventListener('touchstart', preventSwipeGesture, options);
+        document.removeEventListener('touchmove', preventTouchMove, options);
+        //document.documentElement.style.touchAction = 'auto';
     }
 }
 
-// Touch event handling
-canvas.addEventListener('touchstart', handleMouseDown, { passive: false });
-canvas.addEventListener('touchmove', handleMouseMove, { passive: false });
+canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
 canvas.addEventListener('touchend', handleTouchUp, { passive: false });
 canvas.addEventListener('touchcancel', handleTouchUp, { passive: false });
 
@@ -318,6 +324,8 @@ let hoveredTime = 0;
 const selectMargin = 20;
 const selectHoverTime = 0.4;
 let selectedBases = [];
+
+let isMultitouching = false;
 
 function canDragBase(base) {
     return getBaseOwner(base.id) === controlledPlayerId;
@@ -338,7 +346,6 @@ function getBaseSelectRadius(base) {
 }
 
 function handleMouseDown(event) {
-    event.preventDefault();
     dragLocation = getMouseLocation(event);
     input_clickLocation(dragLocation);
 }
@@ -355,11 +362,36 @@ function handleMouseUp(event) {
     input_releaseLocation(dragLocation);
 }
 
+function handleTouchStart(event) {
+    if (!isGameStarted()) return;
+    if (event.touches.length == 1) {
+        handleMouseDown(event);
+    }
+    else {
+        isMultitouching = true;
+        isDragging = false;
+        setTouchInputsLockedToGame(false);
+    }
+}
+
+function handleTouchMove(event) {
+    if (!isGameStarted()) return;
+    if (event.touches.length == 1) {
+        handleMouseMove(event);
+    }
+}
+
 function handleTouchUp(event) {
-    event.preventDefault();
-    // Can't update drag location here because touchend doesn't have a location
-    // just use the last position from touchmove
-    input_releaseLocation(dragLocation);
+    if (isMultitouching && event.touches.length <= 1) {
+        isMultitouching = false;
+        setTouchInputsLockedToGame(true);
+    }
+    else {
+        event.preventDefault();
+        // Can't update drag location here because touchend doesn't have a location
+        // just use the last position from touchmove
+        input_releaseLocation(dragLocation);
+    }
 }
 
 function resetDragging() {
