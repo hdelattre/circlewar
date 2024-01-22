@@ -188,3 +188,13 @@ input[type="checkbox"]:focus {
     height: 1px;
     z-index: -100;
 }
+
+#debugDisplay {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    font-size: 1em;
+    font-weight: bold;
+    color: black;
+    z-index: 100;
+}
