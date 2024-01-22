@@ -272,6 +272,28 @@ function getPlayerColor(playerId) {
 
 let controlledPlayerId = null;
 
+function checkForGestureNav() {
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    if (!isAndroid) return;
+
+    // Calculate the aspect ratio
+    const aspectRatio = window.innerWidth / window.innerHeight;
+    const screenAspectRatio = screen.width / screen.height;
+
+    const threshold = 0.1;
+    const usingGestureNav = Math.abs(aspectRatio - screenAspectRatio) > threshold;
+
+    if (usingGestureNav) {
+        canvas.style.width = '90%';
+    }
+    else {
+        canvas.style.width = '100%';
+    }
+}
+
+// Listen for resize events which might indicate a change in navigation mode
+window.addEventListener('resize', checkForGestureNav);
+
 const preventTouchInput = function(event) { event.preventDefault(); };
 function setTouchInputsLockedToGame(inputs_locked) {
     const options = { passive: false };
@@ -1006,6 +1028,7 @@ function isGameStarted() {
 function startGame(game_options) {
     if (isGameStarted()) return;
 
+    checkForGestureNav();
     setTouchInputsLockedToGame(true);
 
     if (isHost()) {
