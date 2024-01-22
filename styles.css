@@ -169,6 +169,13 @@ input[type="checkbox"]:focus {
     z-index: 1;
 }
 
+#streamsContainer {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+}
+
 #streamsContainer video {
     opacity: 0;
     pointer-events: none;
