@@ -8,6 +8,10 @@ body {
     margin: 0; /* Remove default margin */
 }
 
+html, body {
+    overscroll-behavior-x: none; /* Prevent mobile swipe gestures */
+}
+
 #app {
     text-align: center;
     display: flex;
