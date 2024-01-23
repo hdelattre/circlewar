@@ -171,13 +171,58 @@ function getBaseOwner(id) {
     return game_state.base_owners[id];
 }
 
-function canSendUnits(startBaseId, endBaseId) {
-    return !game_config.roads_only || game_config.roads[startBaseId].indexOf(endBaseId) >= 0;
+function getShortestPath(startBaseId, endBaseId) {
+    if (game_config.roads[startBaseId].indexOf(endBaseId) >= 0) { return [endBaseId]; }
+
+    const startBaseOwner = getBaseOwner(startBaseId);
+    const visited = [];
+    const queue = [];
+    const prev = [];
+    queue.push(startBaseId);
+    visited[startBaseId] = true;
+
+    while (queue.length > 0) {
+        const currentBaseId = queue.shift();
+
+        if (currentBaseId === endBaseId) {
+            // Found the shortest path, reconstruct and return it
+            const path = [];
+            let baseId = endBaseId;
+            while (baseId !== startBaseId) {
+                path.unshift(baseId);
+                baseId = prev[baseId];
+            }
+            return path;
+        }
+
+        const neighbors = game_config.roads[currentBaseId];
+        for (let i = 0; i < neighbors.length; i++) {
+            const neighborBaseId = neighbors[i];
+            if (!visited[neighborBaseId]) {
+                visited[neighborBaseId] = true;
+                prev[neighborBaseId] = currentBaseId;
+                if (getBaseOwner(neighborBaseId) == startBaseOwner || neighborBaseId === endBaseId) {
+                    queue.push(neighborBaseId);
+                }
+            }
+        }
+    }
+
+    // No path found
+    return null;
 }
 
-function sendUnits(startBase, endBase, numUnits) {
+function canSendUnits(startBaseId, endBaseId) {
+    return !game_config.roads_only || getShortestPath(startBaseId, endBaseId) != null;
+}
+
+function sendUnits(startBase, endBase, numUnits, destinationid = null) {
 
     startBase.units -= numUnits;
+
+    if (destinationid && endBase.id == destinationid) {
+        destinationid = null;
+    }
 
     const unitSpacing = 20; // Adjust this value to control the spacing between units
 
@@ -211,7 +256,8 @@ function sendUnits(startBase, endBase, numUnits) {
                 ownerid: getBaseOwner(startBase.id),
                 location: { x: unitX, y: unitY },
                 unittype: startBase.unittype,
-                targetid: endBase.id
+                targetid: endBase.id,
+                destinationid: destinationid,
             };
             spawnedUnits.push(unit);
             game_state.units.push(unit);
@@ -232,13 +278,28 @@ function updateUnits(units, deltaTime, allow_capture = true) {
             unit.location = targetBase.location;
             if (allow_capture) {
                 const ownerid = getBaseOwner(targetBase.id);
-                if (ownerid == unit.ownerid) {
+                let baseOwned = ownerid == unit.ownerid;
+                if (baseOwned) {
                     targetBase.units += 1;
                 } else {
                     targetBase.units -= 1;
                     if (targetBase.units < 0) {
                         targetBase.units = -targetBase.units;
                         game_state.base_owners[targetBase.id] = unit.ownerid;
+                        baseOwned = true;
+                    }
+                }
+
+                if (game_config.roads_only && unit.destinationid != null) {
+                    if (!baseOwned) {
+                        unit.destinationid = null;
+                        return;
+                    }
+                    const destinationPath = getShortestPath(targetBase.id, unit.destinationid);
+                    if (destinationPath != null) {
+                        const sentUnits = sendUnits(targetBase, game_config.bases[destinationPath[0]], 1, unit.destinationid);
+                        updateUnits(sentUnits, (progress - distance) / unitinfo.speed, false);
+                        newUnits.push(...sentUnits);
                     }
                 }
             }
@@ -466,8 +527,9 @@ function input_sendUnits(controlId, startBaseId, endBaseId, numUnits) {
     if (getBaseOwner(startBaseId) != controlId) return;
     // if (startBase.units < numUnits) return;
     if (!canSendUnits(startBaseId, endBaseId)) return;
-    sendUnits(startBase, endBase, numUnits);
-    sendMessage_SendUnits(startBaseId, endBaseId, numUnits);
+    const nextBase = game_config.roads_only ? game_config.bases[getShortestPath(startBaseId, endBaseId)[0]] : endBase;
+    sendUnits(startBase, nextBase, numUnits, endBaseId);
+    sendMessage_SendUnits(startBaseId, nextBase.id, numUnits, endBase.id);
 }
 
 // ------ UTILITY FUNCTIONS ------
@@ -562,8 +624,8 @@ function handleMessage(message) {
     const messageType = message.type;
     const data = message.data;
     if (messageType == MESSAGE_UNITSMOVED) {
-        const sentUnits = sendUnits(game_config.bases[data.id], game_config.bases[data.targetid], data.units)
-        updateUnits(sentUnits, game_state.time - data.time, false)
+        const sentUnits = sendUnits(game_config.bases[data.id], game_config.bases[data.targetid], data.units, data.destinationid);
+        updateUnits(sentUnits, game_state.time - data.time, false);
     }
     else if (messageType == MESSAGE_GAMESTATE) {
         updateGameState(data.game_state);
@@ -592,7 +654,7 @@ function sendMessage_gameState() {
     });
 }
 
-function sendMessage_SendUnits(startBaseId, endBaseId, numUnits) {
+function sendMessage_SendUnits(startBaseId, endBaseId, numUnits, destinationid = null) {
     sendMessage({
         type: MESSAGE_UNITSMOVED,
         data: {
@@ -600,6 +662,7 @@ function sendMessage_SendUnits(startBaseId, endBaseId, numUnits) {
             id: startBaseId,
             targetid: endBaseId,
             units: numUnits,
+            destinationid: destinationid,
         }
     });
 }
