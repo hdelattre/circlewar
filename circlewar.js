@@ -1128,7 +1128,11 @@ function update() {
     const currentTime = performance.now();
     const deltaTime = (currentTime - lastFrameTime) / 1000 * game_state.speed;
 
-    if (deltaTime >= frame_time) {
+    if (deltaTime > 1) {
+        // Skip the frame if the delta time is too large
+        lastFrameTime = currentTime;
+    }
+    else if (deltaTime >= frame_time) {
         lastFrameTime = currentTime;
         updateState(deltaTime);
         draw();
