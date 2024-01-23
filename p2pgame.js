@@ -203,6 +203,7 @@ function registerConnectedPlayer(connection) {
 
 function registerPlayerStream(playerId, stream, is_local) {
     const streamElement = document.createElement('video');
+    streamElement.setAttribute('playsinline', '');
     streamElement.autoplay = true;
     streamElement.muted = is_local;
     streamElement.srcObject = stream;
