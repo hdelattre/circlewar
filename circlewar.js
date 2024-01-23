@@ -619,8 +619,7 @@ function updateGameState(new_game_state) {
     const serverDeltaTime = new_game_state.time - game_state.time;
     game_state = new_game_state;
     // Set time back to simulate forward from the new state
-    if (isGameStarted())
-    {
+    if (isGameStarted() && serverDeltaTime < 5) {
         lastFrameTime -= serverDeltaTime;
     }
 }
