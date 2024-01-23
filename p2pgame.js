@@ -87,7 +87,7 @@ function loadSettingsFromCookies() {
 }
 
 // Never expire cookies
-const cookieExpirationDays = 365 * 10;
+const cookieExpirationDays = 30;
 
 // Load settings values from cookies when the page loads
 window.addEventListener('load', () => {
