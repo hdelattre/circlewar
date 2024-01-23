@@ -524,12 +524,13 @@ function input_releaseLocation(location) {
 function input_sendUnits(controlId, startBaseId, endBaseId, numUnits) {
     const startBase = game_config.bases[startBaseId];
     const endBase = game_config.bases[endBaseId];
-    if (getBaseOwner(startBaseId) != controlId) return;
+    const startBaseOwner = getBaseOwner(startBaseId);
+    if (startBaseOwner != controlId) return;
     // if (startBase.units < numUnits) return;
     if (!canSendUnits(startBaseId, endBaseId)) return;
     const nextBase = game_config.roads_only ? game_config.bases[getShortestPath(startBaseId, endBaseId)[0]] : endBase;
     sendUnits(startBase, nextBase, numUnits, endBaseId);
-    sendMessage_SendUnits(startBaseId, nextBase.id, numUnits, endBase.id);
+    sendMessage_SendUnits(controlId, startBaseId, nextBase.id, numUnits, endBase.id);
 }
 
 // ------ UTILITY FUNCTIONS ------
@@ -624,6 +625,7 @@ function handleMessage(message) {
     const messageType = message.type;
     const data = message.data;
     if (messageType == MESSAGE_UNITSMOVED) {
+        if (data.controlid != getBaseOwner(data.id)) return;
         const sentUnits = sendUnits(game_config.bases[data.id], game_config.bases[data.targetid], data.units, data.destinationid);
         updateUnits(sentUnits, game_state.time - data.time, false);
     }
@@ -654,13 +656,14 @@ function sendMessage_gameState() {
     });
 }
 
-function sendMessage_SendUnits(startBaseId, endBaseId, numUnits, destinationid = null) {
+function sendMessage_SendUnits(controlid, startBaseId, endBaseId, numUnits, destinationid = null) {
     sendMessage({
         type: MESSAGE_UNITSMOVED,
         data: {
             time: game_state.time,
             id: startBaseId,
             targetid: endBaseId,
+            controlid: controlid,
             units: numUnits,
             destinationid: destinationid,
         }
