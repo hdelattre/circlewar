@@ -229,7 +229,7 @@ function sendUnits(startBase, endBase, numUnits, destinationid = null) {
     const startBaseState = game_state.bases[startBase.id];
     startBaseState.units -= numUnits;
 
-    if (destinationid && endBase.id == destinationid) {
+    if (destinationid != null && endBase.id == destinationid) {
         destinationid = null;
     }
 
