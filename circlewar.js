@@ -35,7 +35,7 @@ let game_state = {
     time: 0,
     speed: 1,
     players: [],
-    base_owners: [],
+    bases: [],
     units: [],
 }
 
@@ -66,7 +66,7 @@ function initGame(game_options) {
         time: 0,
         speed: game_options.game_speed,
         players: [],
-        base_owners: [],
+        bases: [],
         units: [],
     };
     ai_controllers = [];
@@ -76,12 +76,11 @@ function initGame(game_options) {
     for (let i = 0; i < num_bases; i++) {
         const newBase = {
             id: game_config.bases.length,
-            units: 10,
             trainingRate: .2 + random(),
             unittype: UNIT_SOLDIER,
             location: getRandomLocation(baseRadius + 10, game_config.bases)
         };
-        addBase(newBase, -1);
+        addBase(newBase, -1, 10);
     }
 
     // Init roads
@@ -150,10 +149,14 @@ function addAIPlayer(name) {
     });
 }
 
-function addBase(base, ownerid) {
+function addBase(base, ownerid, units) {
     game_config.bases.push(base);
     game_config.roads.push([]);
-    game_state.base_owners.push(ownerid);
+    game_state.bases.push({
+        id: base.id,
+        ownerid: ownerid,
+        units: units,
+    });
 }
 
 function addRoad(startBase, endBase) {
@@ -162,13 +165,18 @@ function addRoad(startBase, endBase) {
 }
 
 function assignStartBase(base, playerid) {
-    game_state.base_owners[base.id] = playerid;
-    base.units = 20;
+    const base_state = game_state.bases[base.id];
+    base_state.ownerid = playerid;
+    base_state.units = 20;
     base.trainingRate = 1;
 }
 
 function getBaseOwner(id) {
-    return game_state.base_owners[id];
+    return game_state.bases[id].ownerid;
+}
+
+function getBaseUnits(id) {
+    return game_state.bases[id].units;
 }
 
 function getShortestPath(startBaseId, endBaseId) {
@@ -218,7 +226,8 @@ function canSendUnits(startBaseId, endBaseId) {
 
 function sendUnits(startBase, endBase, numUnits, destinationid = null) {
 
-    startBase.units -= numUnits;
+    const startBaseState = game_state.bases[startBase.id];
+    startBaseState.units -= numUnits;
 
     if (destinationid && endBase.id == destinationid) {
         destinationid = null;
@@ -271,6 +280,7 @@ function updateUnits(units, deltaTime, allow_capture = true) {
     const newUnits = [];
     units.forEach((unit) => {
         const targetBase = game_config.bases[unit.targetid];
+        const baseState = game_state.bases[unit.targetid];
         const distance = getDistance(targetBase.location, unit.location);
         const unitinfo = unittypes[unit.unittype];
         const progress = unitinfo.speed * deltaTime;
@@ -280,12 +290,12 @@ function updateUnits(units, deltaTime, allow_capture = true) {
                 const ownerid = getBaseOwner(targetBase.id);
                 let baseOwned = ownerid == unit.ownerid;
                 if (baseOwned) {
-                    targetBase.units += 1;
+                    baseState.units += 1;
                 } else {
-                    targetBase.units -= 1;
-                    if (targetBase.units < 0) {
-                        targetBase.units = -targetBase.units;
-                        game_state.base_owners[targetBase.id] = unit.ownerid;
+                    baseState.units -= 1;
+                    if (baseState.units < 0) {
+                        baseState.units = -baseState.units;
+                        baseState.ownerid = unit.ownerid;
                         baseOwned = true;
                     }
                 }
@@ -512,8 +522,8 @@ function input_releaseLocation(location) {
         selectedBases.forEach((id) => {
             if (getBaseOwner(id) != getBaseOwner(dragStartBase.id)) return;
             if (id == dragEndBase.id) return;
-            const base = game_config.bases[id];
-            const unitCount = Math.floor(base.units);
+            const baseState = game_state.bases[id];
+            const unitCount = Math.floor(baseState.units);
             input_sendUnits(controlledPlayerId, id, dragEndBase.id, unitCount);
         });
     }
@@ -747,7 +757,8 @@ function gatherAIState(ai_controller, ownedBases, neutralBases) {
 function updateAI_reinforceBases(ai_controller, ai_state) {
     for (i = 0, n = ai_state.playerBases.length; i < n; i++) {
         const base = ai_state.playerBases[i];
-        if (base.units < 10) continue;
+        const baseState = game_state.bases[base.id];
+        if (baseState.units < 10) continue;
         const adjacentBases = game_config.roads[base.id].map((roadid) => { return game_config.bases[roadid]; });
         const adjacentUnowned = adjacentBases.find((adjacentBase) => { return getBaseOwner(adjacentBase.id) < 0 || getBaseOwner(adjacentBase.id) != getBaseOwner(base.id); });
         if (adjacentUnowned != null) continue;
@@ -758,14 +769,15 @@ function updateAI_reinforceBases(ai_controller, ai_state) {
             const numAdjacent = game_config.roads[base.id].filter((roadid) => { return getBaseOwner(roadid) != getBaseOwner(curr.id); }).length;
             if (numAdjacent < lastNumAdjacent) return prev;
             lastNumAdjacent = numAdjacent;
-            return prev.units < curr.units ? prev : curr;
+            return getBaseUnits(prev.id) < getBaseUnits(curr.id) ? prev : curr;
         });
         if (friendlyBase == null) continue;
+        const friendlyBaseState = game_state.bases[friendlyBase.id];
         const enemyTargeting = ai_state.enemyUnits.filter((unit) => unit.targetid == base.id);
         const friendlyTargeting = ai_state.enemyUnits.filter((unit) => unit.targetid == base.id);
-        const adjustedUnits = friendlyBase.units - enemyTargeting.length + friendlyTargeting.length;
-        if (adjustedUnits <= 5 && base.units >= (friendlyBase.units + 5)) {
-            const sendUnitCount = Math.floor(base.units);
+        const adjustedUnits = friendlyBaseState.units - enemyTargeting.length + friendlyTargeting.length;
+        if (adjustedUnits <= 5 && baseState.units >= (friendlyBaseState.units + 5)) {
+            const sendUnitCount = Math.floor(baseState.units);
             input_sendUnits(ai_controller.controlid, base.id, friendlyBase.id, sendUnitCount);
             return;
         }
@@ -776,7 +788,8 @@ function updateAI_reinforceBases(ai_controller, ai_state) {
 function updateAI_greedyExpand(ai_controller, ai_state) {
     for (i = 0, n = ai_state.playerBases.length; i < n; i++) {
         const base = ai_state.playerBases[i];
-        if (base.units < 10) continue;
+        const baseState = game_state.bases[base.id];
+        if (baseState.units < 10) continue;
         function canTargetNeutralBase(targetBase) {
             if (!canSendUnits(base.id, targetBase.id)) return false;
             if (ai_state.playerUnits.find((unit) => unit.targetid == targetBase.id)) return false;
@@ -788,8 +801,8 @@ function updateAI_greedyExpand(ai_controller, ai_state) {
             if (!canTargetNeutralBase(curr)) return canTargetNeutralBase(prev) ? prev : null;
             return prev.trainingRate > curr.trainingRate ? prev : curr;
         });
-        if (neutralBase && base.units >= (neutralBase.units + 3)) {
-            const sendUnitCount = Math.floor(base.units);
+        if (neutralBase && baseState.units >= (getBaseUnits(neutralBase.id) + 3)) {
+            const sendUnitCount = Math.floor(baseState.units);
             input_sendUnits(ai_controller.controlid, base.id, neutralBase.id, sendUnitCount);
             return;
         }
@@ -800,7 +813,8 @@ function updateAI_greedyExpand(ai_controller, ai_state) {
 function updateAI_attackExpand(ai_controller, ai_state) {
     for (i = 0, n = ai_state.playerBases.length; i < n; i++) {
         const base = ai_state.playerBases[i];
-        if (base.units < 10) continue;
+        const baseState = game_state.bases[base.id];
+        if (baseState.units < 10) continue;
         function canTargetNeutralBase(targetBase) {
             if (!canSendUnits(base.id, targetBase.id)) return false;
             if (ai_state.playerUnits.find((unit) => unit.targetid == targetBase.id)) return false;
@@ -821,16 +835,17 @@ function updateAI_attackExpand(ai_controller, ai_state) {
         const enemyBase = ai_state.enemyBases.length <= 0 ? null : ai_state.enemyBases.reduce((prev, curr) => {
             if (prev == null) return canTargetEnemyBase(curr) ? curr : null;
             if (!canTargetEnemyBase(curr)) return canTargetEnemyBase(prev) ? prev : null;
-            if (curr.units < base.units + 2 && prev.units > curr.units + 2) return curr;
+            const currUnits = getBaseUnits(curr.id);
+            if (currUnits < baseState.units + 2 && getBaseUnits(prev.id) > currUnits + 2) return curr;
             return prev.trainingRate > curr.trainingRate ? prev : curr;
         });
-        if (enemyBase && base.units >= (enemyBase.units + 15)) {
-            const sendUnitCount = Math.floor(base.units);
+        if (enemyBase && baseState.units >= (game_state.bases[enemyBase.id].units + 15)) {
+            const sendUnitCount = Math.floor(baseState.units);
             input_sendUnits(ai_controller.controlid, base.id, enemyBase.id, sendUnitCount);
             return;
         }
-        else if (neutralBase && base.units >= (neutralBase.units + 3)) {
-            const sendUnitCount = Math.floor(base.units);
+        else if (neutralBase && baseState.units >= (game_state.bases[neutralBase.id].units + 3)) {
+            const sendUnitCount = Math.floor(baseState.units);
             input_sendUnits(ai_controller.controlid, base.id, neutralBase.id, sendUnitCount);
             return;
         }
@@ -841,7 +856,8 @@ function updateAI_attackExpand(ai_controller, ai_state) {
 function updateAI_zergRush(ai_controller, ai_state) {
     for (i = 0, n = ai_state.playerBases.length; i < n; i++) {
         const base = ai_state.playerBases[i];
-        if (base.units < 6) continue;
+        const baseState = game_state.bases[base.id];
+        if (baseState.units < 6) continue;
         function canTargetEnemyBase(targetBase) {
             if (!canSendUnits(base.id, targetBase.id)) return false;
             if (ai_state.playerUnits.find((unit) => unit.targetid == targetBase.id)) return false;
@@ -850,11 +866,12 @@ function updateAI_zergRush(ai_controller, ai_state) {
         const enemyBase = ai_state.enemyBases.length <= 0 ? null : ai_state.enemyBases.reduce((prev, curr) => {
             if (prev == null) return canTargetEnemyBase(curr) ? curr : null;
             if (!canTargetEnemyBase(curr)) return canTargetEnemyBase(prev) ? prev : null;
-            if (curr.units < 10 && curr.units < prev.units) return curr;
+            const currUnits = getBaseUnits(curr.id);
+            if (currUnits < 10 && currUnits < getBaseUnits(prev.id)) return curr;
             return prev.trainingRate > curr.trainingRate ? prev : curr;
         });
         if (enemyBase) {
-            const sendUnitCount = Math.floor(base.units);
+            const sendUnitCount = Math.floor(baseState.units);
             input_sendUnits(ai_controller.controlid, base.id, enemyBase.id, sendUnitCount);
             return;
         }
@@ -911,9 +928,9 @@ function updateState(deltaTime) {
         }
     }
 
-    game_config.bases.forEach((base) => {
-        if (getBaseOwner(base.id) < 0 && base.units >= 10) return;
-        base.units += base.trainingRate * deltaTime;
+    game_state.bases.forEach((baseState) => {
+        if (baseState.ownerid < 0 && baseState.units >= 10) return;
+        baseState.units += game_config.bases[baseState.id].trainingRate * deltaTime;
     });
 
     const newUnits = updateUnits(game_state.units, deltaTime);
@@ -1001,7 +1018,8 @@ function draw() {
     // Render game objects
     game_config.bases.forEach((base) => {
         const { x, y } = base.location; // Get the x and y coordinates from the base's location
-        const ownerid = getBaseOwner(base.id);
+        const baseState = game_state.bases[base.id];
+        const ownerid = baseState.ownerid;
         const radius = baseRadius;
 
         // Draw the base circle
@@ -1050,7 +1068,7 @@ function draw() {
         context.font = '20px Arial';
         context.fillStyle = 'black';
         context.textAlign = 'center';
-        context.fillText(parseInt(base.units), x, y + radius + 20);
+        context.fillText(parseInt(baseState.units), x, y + radius + 20);
     });
 
     game_state.units.forEach((unit) => {
