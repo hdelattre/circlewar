@@ -201,18 +201,35 @@ function getBaseUnits(id) {
     return game_state.bases[id].units;
 }
 
-function getShortestPath(startBaseId, endBaseId) {
+function getBaseDistance(startId, endId) {
+    return getDistance(game_config.bases[startId].location, game_config.bases[endId].location);
+}
+
+function getShortestPath(startBaseId, endBaseId, heuristic = getBaseDistance) {
     if (game_config.roads[startBaseId].indexOf(endBaseId) >= 0) { return [endBaseId]; }
 
     const startBaseOwner = getBaseOwner(startBaseId);
     const visited = [];
     const queue = [];
     const prev = [];
+    const gScore = [];
+    const fScore = [];
     queue.push(startBaseId);
     visited[startBaseId] = true;
+    gScore[startBaseId] = 0;
+    fScore[startBaseId] = heuristic(startBaseId, endBaseId);
 
     while (queue.length > 0) {
-        const currentBaseId = queue.shift();
+        let currentBaseId = queue[0];
+        let currentIndex = 0;
+        for (let i = 1; i < queue.length; i++) {
+            if (fScore[queue[i]] < fScore[currentBaseId]) {
+                currentBaseId = queue[i];
+                currentIndex = i;
+            }
+        }
+
+        queue.splice(currentIndex, 1);
 
         if (currentBaseId === endBaseId) {
             // Found the shortest path, reconstruct and return it
@@ -228,11 +245,16 @@ function getShortestPath(startBaseId, endBaseId) {
         const neighbors = game_config.roads[currentBaseId];
         for (let i = 0; i < neighbors.length; i++) {
             const neighborBaseId = neighbors[i];
-            if (!visited[neighborBaseId]) {
+            const tentativeGScore = gScore[currentBaseId] + 1;
+            if (!visited[neighborBaseId] || tentativeGScore < gScore[neighborBaseId]) {
                 visited[neighborBaseId] = true;
                 prev[neighborBaseId] = currentBaseId;
+                gScore[neighborBaseId] = tentativeGScore;
+                fScore[neighborBaseId] = gScore[neighborBaseId] + heuristic(neighborBaseId, endBaseId);
                 if (getBaseOwner(neighborBaseId) == startBaseOwner || neighborBaseId === endBaseId) {
-                    queue.push(neighborBaseId);
+                    if (!queue.includes(neighborBaseId)) {
+                        queue.push(neighborBaseId);
+                    }
                 }
             }
         }
