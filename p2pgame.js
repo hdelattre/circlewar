@@ -51,6 +51,8 @@ const COOKIE_GAME_SPEED = 'gameSpeed';
 const COOKIE_ROADS = 'roadsCheckbox';
 const COOKIE_MUSIC = 'musicCheckbox';
 const COOKIE_CAMERA = 'cameraCheckbox';
+const COOKIE_MAPSIZEX = 'mapSizeX';
+const COOKIE_MAPSIZEY = 'mapSizeY';
 
 function loadSettingsFromCookies() {
     const aiSliderValue = getCookie(COOKIE_AI);
@@ -59,16 +61,27 @@ function loadSettingsFromCookies() {
     const roadsCheckboxValue = getCookie(COOKIE_ROADS);
     const musicCheckboxValue = getCookie(COOKIE_MUSIC);
     const cameraCheckboxValue = getCookie(COOKIE_CAMERA);
+    const mapSizeXValue = getCookie(COOKIE_MAPSIZEX);
+    const mapSizeYValue = getCookie(COOKIE_MAPSIZEY);
 
     if (aiSliderValue) {
         aiSlider.value = aiSliderValue;
         aiSliderLabel.textContent = aiSliderValue;
     }
 
+    // Unlimit bases while we load the value and map size, then recalcualte the max
+    basesSlider.max = Number.MAX_SAFE_INTEGER;
     if (basesSliderValue) {
         basesSlider.value = basesSliderValue;
         basesSliderLabel.textContent = basesSliderValue;
     }
+    if (mapSizeXValue) {
+        mapSizeXText.value = mapSizeXValue;
+    }
+    if (mapSizeYValue) {
+        mapSizeYText.value = mapSizeYValue;
+    }
+    refreshMaxBases();
 
     if (gameSpeedSliderValue) {
         gameSpeedSlider.value = gameSpeedSliderValue;
@@ -117,6 +130,7 @@ function refreshMaxBases() {
     if (basesSlider.value > maxBases) {
         basesSlider.value = maxBases;
         basesSliderLabel.textContent = basesSlider.value;
+        setCookie(COOKIE_BASES, basesSlider.value, cookieExpirationDays);
     }
     basesSlider.max = maxBases;
 }
@@ -129,6 +143,7 @@ mapSizeXText.addEventListener('change', () => {
     else if (value > maxMapSize.x) {
         mapSizeXText.value = maxMapSize.x;
     }
+    setCookie(COOKIE_MAPSIZEX, mapSizeXText.value, cookieExpirationDays);
     refreshMaxBases();
 });
 mapSizeYText.addEventListener('change', () => {
@@ -139,6 +154,7 @@ mapSizeYText.addEventListener('change', () => {
     else if (value > maxMapSize.y) {
         mapSizeYText.value = maxMapSize.y;
     }
+    setCookie(COOKIE_MAPSIZEY, mapSizeYText.value, cookieExpirationDays);
     refreshMaxBases();
 });
 
