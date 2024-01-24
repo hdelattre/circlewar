@@ -178,6 +178,7 @@ function addBase(base, ownerid, units) {
         id: base.id,
         ownerid: ownerid,
         units: units,
+        autotarget: null,
     });
 }
 
@@ -340,6 +341,7 @@ function updateUnits(units, deltaTime, allow_capture = true) {
                     if (baseState.units < 0) {
                         baseState.units = -baseState.units;
                         baseState.ownerid = unit.ownerid;
+                        baseState.autotarget = null;
                         baseOwned = true;
                     }
                 }
@@ -439,6 +441,9 @@ let hoveredTime = 0;
 const selectMargin = 20;
 const selectHoverTime = 0.4;
 let selectedBases = [];
+const doubleClickMs = 300;
+let lastClickTime = 0;
+let doubleClick = false;
 
 let isMultitouching = false;
 
@@ -519,6 +524,8 @@ function resetDragging() {
 }
 
 function input_clickLocation(location) {
+    doubleClick = (lastFrameTime - lastClickTime) < doubleClickMs;
+    lastClickTime = lastFrameTime;
     const selectedBase = game_config.bases.find((base) => {
         if (!canDragBase(base)) return false;
         return getDistance(location, base.location) <= getBaseSelectRadius(base);
@@ -568,23 +575,26 @@ function input_releaseLocation(location) {
             if (id == dragEndBase.id) return;
             const baseState = game_state.bases[id];
             const unitCount = Math.floor(baseState.units);
-            input_sendUnits(controlledPlayerId, id, dragEndBase.id, unitCount);
+            input_sendUnits(controlledPlayerId, id, dragEndBase.id, unitCount, doubleClick);
         });
     }
 
     isDragging = false;
 }
 
-function input_sendUnits(controlId, startBaseId, endBaseId, numUnits) {
+function input_sendUnits(controlId, startBaseId, endBaseId, numUnits, forever) {
     const startBase = game_config.bases[startBaseId];
     const endBase = game_config.bases[endBaseId];
     const startBaseOwner = getBaseOwner(startBaseId);
     if (startBaseOwner != controlId) return;
     // if (startBase.units < numUnits) return;
     if (!canSendUnits(startBaseId, endBaseId)) return;
-    const nextBase = game_config.roads_only ? game_config.bases[getShortestPath(startBaseId, endBaseId)[0]] : endBase;
+    const shortestPath = getShortestPath(startBaseId, endBaseId);
+    if (shortestPath == null) return;
+    game_state.bases[startBaseId].autotarget = forever ? endBaseId : null;
+    const nextBase = game_config.roads_only ? game_config.bases[shortestPath[0]] : endBase;
     sendUnits(startBase, nextBase, numUnits, endBaseId);
-    sendMessage_SendUnits(controlId, startBaseId, nextBase.id, numUnits, endBase.id);
+    sendMessage_SendUnits(controlId, startBaseId, nextBase.id, numUnits, endBase.id, forever);
 }
 
 // ------ UTILITY FUNCTIONS ------
@@ -681,6 +691,7 @@ function handleMessage(message) {
         if (data.controlid != getBaseOwner(data.id)) return;
         const sentUnits = sendUnits(game_config.bases[data.id], game_config.bases[data.targetid], data.units, data.destinationid);
         updateUnits(sentUnits, game_state.time - data.time, false);
+        game_state.bases[data.id].autotarget = data.forever ? data.targetid : null;
     }
     else if (messageType == MESSAGE_GAMESTATE) {
         updateGameState(data.game_state);
@@ -712,7 +723,7 @@ function sendMessage_gameState() {
     });
 }
 
-function sendMessage_SendUnits(controlid, startBaseId, endBaseId, numUnits, destinationid = null) {
+function sendMessage_SendUnits(controlid, startBaseId, endBaseId, numUnits, destinationid = null, forever = false) {
     sendMessage({
         type: MESSAGE_UNITSMOVED,
         data: {
@@ -722,6 +733,7 @@ function sendMessage_SendUnits(controlid, startBaseId, endBaseId, numUnits, dest
             controlid: controlid,
             units: numUnits,
             destinationid: destinationid,
+            forever: forever
         }
     });
 }
@@ -977,6 +989,18 @@ function updateState(deltaTime) {
     game_state.bases.forEach((baseState) => {
         if (baseState.ownerid < 0 && baseState.units >= 10) return;
         baseState.units += game_config.bases[baseState.id].trainingRate * deltaTime;
+        // Autosend units
+        if (baseState.autotarget == null || baseState.units < 1) return;
+        const base = game_config.bases[baseState.id];
+        const targetBase = game_config.bases[baseState.autotarget];
+        const unitCount = Math.floor(baseState.units);
+        const shortestPath = getShortestPath(base.id, targetBase.id);
+        if (shortestPath == null) {
+            baseState.autotarget = null;
+            return;
+        }
+        const nextBase = game_config.roads_only ? game_config.bases[shortestPath[0]] : endBase;
+        sendUnits(base, nextBase, unitCount, targetBase.id);
     });
 
     const newUnits = updateUnits(game_state.units, deltaTime);
