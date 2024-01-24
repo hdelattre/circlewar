@@ -12,6 +12,8 @@ const basesSlider = document.getElementById('numBasesSlider');
 const basesSliderLabel = document.getElementById('numBasesValue');
 const gameSpeedSlider = document.getElementById('gameSpeedSlider');
 const gameSpeedLabel = document.getElementById('gameSpeedValue');
+const mapSizeXText = document.getElementById('mapSizeXText');
+const mapSizeYText = document.getElementById('mapSizeYText');
 const roadsCheckbox = document.getElementById('roadsCheckbox');
 const cameraCheckbox = document.getElementById('cameraCheckbox');
 const musicCheckbox = document.getElementById('musicCheckbox');
@@ -110,6 +112,36 @@ roadsCheckbox.oninput = updateSetting_roads;
 musicCheckbox.oninput = updateSetting_music;
 cameraCheckbox.oninput = updateSetting_camera;
 
+function refreshMaxBases() {
+    const maxBases = getMaxBases({ x: mapSizeXText.value, y: mapSizeYText.value });
+    if (basesSlider.value > maxBases) {
+        basesSlider.value = maxBases;
+        basesSliderLabel.textContent = basesSlider.value;
+    }
+    basesSlider.max = maxBases;
+}
+
+mapSizeXText.addEventListener('change', () => {
+    const value = mapSizeXText.value;
+    if (value < minMapSize.x) {
+        mapSizeXText.value = minMapSize.x;
+    }
+    else if (value > maxMapSize.x) {
+        mapSizeXText.value = maxMapSize.x;
+    }
+    refreshMaxBases();
+});
+mapSizeYText.addEventListener('change', () => {
+    const value = mapSizeYText.value;
+    if (value < minMapSize.y) {
+        mapSizeYText.value = minMapSize.y;
+    }
+    else if (value > maxMapSize.y) {
+        mapSizeYText.value = maxMapSize.y;
+    }
+    refreshMaxBases();
+});
+
 hostGameButton.addEventListener('click', () => {
     hostGame();
 });
@@ -156,6 +188,7 @@ function isHost() {
 function getGameOptions() {
     return {
         seed: gameSeedText.value,
+        map_size: { x: mapSizeXText.value, y: mapSizeYText.value },
         num_ai_players: aiSlider.value,
         num_bases: basesSlider.value,
         roads_enabled: roadsCheckbox.checked,

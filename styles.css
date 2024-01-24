@@ -70,7 +70,7 @@ input[type=range] {
 }
 
 input[type="text"] {
-    padding: 10px; /* Add padding to the input */
+    padding: 5px 10px; /* Add padding to the input */
     font-size: 1em; /* Adjust font size */
     border: 1px solid #ccc; /* Add a border */
     border-radius: 5px; /* Add rounded corners */
@@ -113,10 +113,44 @@ input[type="checkbox"]:focus {
     box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.3); /* Add focus outline */
 }
 
-#menu {
+#mainMenu {
     background-color: #e6f2f4; /* Off white background */
     border: 1px solid #007bff; /* Slick thin blue border */
-    /* Add other styles for the menu */
+}
+
+#subMenus {
+    align-items: center; /* Center items vertically */
+    padding: 20px 10px;
+}
+
+#startMenu {
+    margin-right: 40px;
+}
+
+#startMenu p {
+    visibility: collapse;
+    margin: 0;
+}
+
+@media (min-width: 750px) {
+    #subMenus {
+        display: flex; /* Make it a flex container */
+        flex-direction: row; /* Arrange items horizontally */
+        justify-content: space-between; /* Distribute items evenly along the main axis */
+    }
+    #startMenu p {
+        visibility: visible;
+        margin: 1em 0;
+    }
+}
+
+#gameOptions {
+    text-align: left;
+}
+
+#gameOptions label, 
+#gameOptions input:not([type="checkbox"]) {
+    margin-top: 16px;
 }
 
 #backgroundimage {

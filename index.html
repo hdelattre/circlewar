@@ -10,42 +10,64 @@
     <div id="app">
         <div id="hostStage">
             <img id="backgroundimage" src="assets/circlewar_background.png" alt="CircleWar"></img>
-            <div id="menu">
+            <div id="mainMenu">
                 <img id="logoimage" src="assets/circlewar_logo.png" alt="CircleWar"></img>
                 <br>
-                <button id="hostGameButton">Host Game</button>
-                <p>or</p>
-                <div id="joinBox">
-                    <input type="text" id="joinCodeInput" placeholder="Enter join code">
-                    <br>
-                    <button id="joinGameButton">Join Game</button>
-                </div>
-                <p>or</p>
-                <button id="singlePlayerButton">Single Player</button>
-                <div id="gameOptions">
-                    <label for="numBasesSlider">Bases:</label>
-                    <input type="range" id="numBasesSlider" min="15" max="70" value="40">
-                    <span id="numBasesValue">40</span>
-                    <br>
-                    <label for="numAIPlayersSlider">AI Players:</label>
-                    <input type="range" id="numAIPlayersSlider" min="0" max="7" value="1">
-                    <span id="numAIPlayersValue">1</span>
-                    <br>
-                    <label for="roadsCheckbox">Roads:</label>
-                    <input type="checkbox" id="roadsCheckbox" checked>
-                    <br>
-                    <label for="cameraCheckbox">Camera:</label>
-                    <input type="checkbox" id="cameraCheckbox" unchecked>
-                    <br>
-                    <label for="musicCheckbox">Music:</label>
-                    <input type="checkbox" id="musicCheckbox" unchecked>
-                    <br>
-                    <label for="gameSpeedSlider">Game Speed:</label>
-                    <input type="range" id="gameSpeedSlider" min="1" max="20" value="1">
-                    <span id="gameSpeedValue">1</span>
-                    <br>
-                    <label for="gameSeedText">Seed:</label>
-                    <input type="text" id="gameSeedText" value="-1">
+                <div id="subMenus">
+                    <div id="startMenu">
+                        <button id="singlePlayerButton">Single Player</button>
+                        <p>---------</p>
+                        <br>
+                        <button id="hostGameButton">Host Game</button>
+                        <p>or</p>
+                        <div id="joinBox">
+                            <input type="text" id="joinCodeInput" placeholder="Enter join code">
+                            <br>
+                            <button id="joinGameButton">Join Game</button>
+                        </div>
+                    </div>
+                    <div id="gameOptions">
+                        <div class="rangeOption">
+                            <label for="numBasesSlider">Bases:</label>
+                            <input type="range" id="numBasesSlider" min="16" max="70" value="40">
+                            <span id="numBasesValue">40</span>
+                        </div>
+                        <div class="rangeOption">
+                            <label for="numAIPlayersSlider">AI Players:</label>
+                            <input type="range" id="numAIPlayersSlider" min="0" max="7" value="1">
+                            <span id="numAIPlayersValue">1</span>
+                        </div>
+                        <div class="menuOption">
+                            <label for="roadsCheckbox">Roads:</label>
+                            <input type="checkbox" id="roadsCheckbox" checked>
+                        </div>
+                        <div class="menuOption">
+                            <label for="mapSizeXText">Map X:</label>
+                            <input type="text" id="mapSizeXText" placeholder="Enter map X" value="650">
+                        </div>
+                        <div class="menuOption">
+                            <label for="mapSizeYText">Map Y:</label>
+                            <input type="text" id="mapSizeYText" placeholder="Enter map Y" value="850">
+                        </div>
+                        <div class="menuOption">
+                            <label for="gameSeedText">Seed:</label>
+                            <input type="text" id="gameSeedText" value="-1">
+                        </div>
+                        <br>
+                        <div class="menuOption">
+                            <label for="cameraCheckbox">Camera:</label>
+                            <input type="checkbox" id="cameraCheckbox" unchecked>
+                        </div>
+                        <div class="menuOption">
+                            <label for="musicCheckbox">Music:</label>
+                            <input type="checkbox" id="musicCheckbox" unchecked>
+                        </div>
+                        <div class="rangeOption">
+                            <label for="gameSpeedSlider">Game Speed:</label>
+                            <input type="range" id="gameSpeedSlider" min="1" max="20" value="1">
+                            <span id="gameSpeedValue">1</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

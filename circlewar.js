@@ -6,12 +6,6 @@ const canvas = document.getElementById('gameCanvas');
 const context = canvas.getContext('2d');
 
 // ------ GAME TYPES ------
-const UNIT_SOLDIER = 'soldier';
-const unittypes = {
-    [UNIT_SOLDIER]: {
-        speed: 100
-    }
-};
 const playerSlots = [
     { id: 0, color: 'blue', name: 'Player 1' },
     { id: 1, color: 'red', name: 'Player 2' },
@@ -22,7 +16,21 @@ const playerSlots = [
     { id: 6, color: 'pink', name: 'Player 7' },
     { id: 7, color: 'brown', name: 'Player 8' },
 ];
+const minMapSize = {x: 400, y: 400};
+const maxMapSize = {x: 2048, y: 2048};
 const baseRadius = 20;
+const baseMinDist = 10;
+const UNIT_SOLDIER = 'soldier';
+const unittypes = {
+    [UNIT_SOLDIER]: {
+        speed: 100
+    }
+};
+
+function getMaxBases(mapSize) {
+    const minBaseSpacing = baseRadius * 2 + baseMinDist;
+    return Math.floor(mapSize.x * mapSize.y / (minBaseSpacing * minBaseSpacing * Math.PI));
+}
 
 // ------ GAME STATE ------
 let game_config = {
@@ -43,23 +51,37 @@ let ai_controllers = [];
 
 // ------ GAME FUNCTIONS ------
 
+// All players init
+function initFromConfig(config) {
+
+    game_config = config;
+
+    // Init seed
+    if (config.seed < 0) {
+        random = Math.random;
+    }
+    else {
+        seededRandom = new SeededRandom(config.seed);
+        random = seededRandom.next.bind(seededRandom);
+    }
+
+    // Init map size
+    canvas.width = config.map_size.x;
+    canvas.height = config.map_size.y;
+}
+
+// Host only
 function initGame(game_options) {
 
-    game_config = {
+    const config = {
         seed: game_options.seed,
+        map_size: game_options.map_size,
         bases: [],
         roads: [],
         roads_only: game_options.roads_enabled,
     }
 
-    // Init seed
-    if (game_config.seed < 0) {
-        random = Math.random;
-    }
-    else {
-        seededRandom = new SeededRandom(game_config.seed);
-        random = seededRandom.next.bind(seededRandom);
-    }
+    initFromConfig(config);
 
     // Reset game state
     game_state = {
@@ -78,7 +100,7 @@ function initGame(game_options) {
             id: game_config.bases.length,
             trainingRate: .2 + random(),
             unittype: UNIT_SOLDIER,
-            location: getRandomLocation(baseRadius + 10, game_config.bases)
+            location: getRandomLocation(baseRadius + baseMinDist, game_config.bases)
         };
         addBase(newBase, -1, 10);
     }
@@ -642,13 +664,16 @@ function handleMessage(message) {
         updateGameState(data.game_state);
     }
     else if (messageType == MESSAGE_STARTGAME) {
-        game_config = data.game_config;
-        updateGameState(data.game_state);
         if (!isGameStarted()) {
+            initFromConfig(data.game_config);
+            updateGameState(data.game_state);
             localPlayerId = data.playerid;
             controlledPlayerId = data.controlid;
             console.log('Joined game as player ' + localPlayerId + ' with control over player ' + controlledPlayerId);
             startGame(data.game_options);
+        }
+        else {
+            updateGameState(data.game_state);
         }
     }
     else if (messageType == MESSAGE_PLAYERWIN) {
