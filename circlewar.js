@@ -207,7 +207,7 @@ function getBaseDistance(startId, endId) {
 }
 
 function getShortestPath(startBaseId, endBaseId, heuristic = getBaseDistance) {
-    if (game_config.roads[startBaseId].indexOf(endBaseId) >= 0) { return [endBaseId]; }
+    if (!game_config.roads_only || game_config.roads[startBaseId].indexOf(endBaseId) >= 0) { return [endBaseId]; }
 
     const startBaseOwner = getBaseOwner(startBaseId);
     const visited = [];
@@ -992,15 +992,14 @@ function updateState(deltaTime) {
         // Autosend units
         if (baseState.autotarget == null || baseState.units < 1) return;
         const base = game_config.bases[baseState.id];
-        const targetBase = game_config.bases[baseState.autotarget];
         const unitCount = Math.floor(baseState.units);
-        const shortestPath = getShortestPath(base.id, targetBase.id);
+        const shortestPath = getShortestPath(base.id, baseState.autotarget);
         if (shortestPath == null) {
             baseState.autotarget = null;
             return;
         }
-        const nextBase = game_config.roads_only ? game_config.bases[shortestPath[0]] : endBase;
-        sendUnits(base, nextBase, unitCount, targetBase.id);
+        const nextBase = game_config.bases[shortestPath[0]];
+        sendUnits(base, nextBase, unitCount, baseState.autotarget);
     });
 
     const newUnits = updateUnits(game_state.units, deltaTime);
