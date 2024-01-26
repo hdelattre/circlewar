@@ -73,8 +73,10 @@ function initFromConfig(config) {
 // Host only
 function initGame(game_options) {
 
+    const seed = game_options.seed < 0 ? Math.floor(Math.random() * 1000000) : game_options.seed;
+
     const config = {
-        seed: game_options.seed,
+        seed: seed,
         map_size: game_options.map_size,
         bases: [],
         roads: [],

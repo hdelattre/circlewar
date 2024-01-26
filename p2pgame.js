@@ -18,6 +18,7 @@ const roadsCheckbox = document.getElementById('roadsCheckbox');
 const cameraCheckbox = document.getElementById('cameraCheckbox');
 const musicCheckbox = document.getElementById('musicCheckbox');
 const gameSeedText = document.getElementById('gameSeedText');
+const lastSeedButton = document.getElementById('lastSeedButton');
 const playAgainButton = document.getElementById('playAgainButton');
 const debugText = document.getElementById('debugText');
 let endCreditsAudio = null;
@@ -53,6 +54,8 @@ const COOKIE_MUSIC = 'musicCheckbox';
 const COOKIE_CAMERA = 'cameraCheckbox';
 const COOKIE_MAPSIZEX = 'mapSizeX';
 const COOKIE_MAPSIZEY = 'mapSizeY';
+const COOKIE_SEEDUSER = 'userSeed';
+const COOKIE_SEEDLAST = 'lastSeed';
 
 function loadSettingsFromCookies() {
     const aiSliderValue = getCookie(COOKIE_AI);
@@ -63,6 +66,7 @@ function loadSettingsFromCookies() {
     const cameraCheckboxValue = getCookie(COOKIE_CAMERA);
     const mapSizeXValue = getCookie(COOKIE_MAPSIZEX);
     const mapSizeYValue = getCookie(COOKIE_MAPSIZEY);
+    const userSeedValue = getCookie(COOKIE_SEEDUSER);
 
     if (aiSliderValue) {
         aiSlider.value = aiSliderValue;
@@ -90,6 +94,10 @@ function loadSettingsFromCookies() {
 
     if (roadsCheckboxValue) {
         roadsCheckbox.checked = roadsCheckboxValue == 'true';
+    }
+
+    if (userSeedValue) {
+        gameSeedText.value = userSeedValue;
     }
 
     if (musicCheckboxValue) {
@@ -158,6 +166,24 @@ mapSizeYText.addEventListener('change', () => {
     refreshMaxBases();
 });
 
+gameSeedText.addEventListener('change', () => {
+    const value = gameSeedText.value;
+    if (value > MAX_SEED) {
+        gameSeedText.value = MAX_SEED;
+    }
+    else if (value < -1) {
+        gameSeedText.value = -1;
+    }
+    setCookie(COOKIE_SEEDUSER, gameSeedText.value, cookieExpirationDays);
+});
+
+lastSeedButton.addEventListener('click', () => {
+    const lastSeed = getCookie(COOKIE_SEEDLAST);
+    if (lastSeed) {
+        gameSeedText.value = lastSeed;
+    }
+});
+
 hostGameButton.addEventListener('click', () => {
     hostGame();
 });
@@ -196,6 +222,7 @@ function switchStage(hideStageId, showStageId) {
 
 let localPlayerId = null;
 let hosted_game_options = null;
+const MAX_SEED = 99999999;
 
 function isHost() {
     return localPlayerId == 0;
@@ -222,9 +249,23 @@ function getPeerPlayerIndex(peerId) {
     });
 };
 
+function initRandomSeed(game_options) {
+    if (game_options.seed < 0) {
+        game_options.seed = Math.floor(Math.random() * 1000000);
+    }
+
+    setCookie(COOKIE_SEEDLAST, game_options.seed, cookieExpirationDays);
+
+    debugText.textContent = 'Seed: ' + game_options.seed;
+    window.setTimeout(() => {
+        debugText.textContent = '';
+    }, 5000);
+}
+
 function startSinglePlayerGame() {
     localPlayerId = 0;
     hosted_game_options = getGameOptions();
+    initRandomSeed(hosted_game_options);
     startGame(hosted_game_options);
 }
 
@@ -445,6 +486,7 @@ function setupConnection(connection, is_host) {
             if (!isGameStarted()) {
                 switchStage('linkStage', 'gameStage');
                 hosted_game_options = getGameOptions();
+                initRandomSeed(hosted_game_options);
                 startGame(hosted_game_options);
                 controlId = playerId;
             }

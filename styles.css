@@ -27,6 +27,11 @@ body::-webkit-scrollbar {
     width: 100%;
 }
 
+#gameCanvas {
+    width: 100%;
+    height: auto; /* Adjust height to maintain aspect ratio */
+}
+
 #numberDisplay {
     margin: 20px;
     font-size: 2em;
@@ -54,11 +59,6 @@ button:focus {
     outline: none; /* Remove focus outline */
 }
 
-#gameCanvas {
-    width: 100%;
-    height: auto; /* Adjust height to maintain aspect ratio */
-}
-
 #logoimage {
     width: 256px; /* Make logo larger */
     height: auto; /* Adjust height to maintain aspect ratio */
@@ -70,7 +70,9 @@ input[type=range] {
 }
 
 input[type="text"] {
-    padding: 5px 10px; /* Add padding to the input */
+    width: 120px;
+    padding: 4px 10px; /* Add padding to the input */
+    margin: 0 10px;
     font-size: 1em; /* Adjust font size */
     border: 1px solid #ccc; /* Add a border */
     border-radius: 5px; /* Add rounded corners */
@@ -82,13 +84,6 @@ input[type="text"]:focus {
     outline: none; /* Remove focus outline */
     border-color: #007bff; /* Change border color on focus */
     box-shadow: 0 2px 4px rgba(0,0,0,0.4); /* Increase shadow on focus */
-}
-
-label {
-    font-family: "Helvetica Neue", Arial, sans-serif;
-    font-size: 1.2em;
-    font-weight: bold;
-    color: #333333;
 }
 
 input[type="checkbox"] {
@@ -111,6 +106,22 @@ input[type="checkbox"]:checked {
 input[type="checkbox"]:focus {
     outline: none; /* Remove focus outline */
     box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.3); /* Add focus outline */
+}
+
+label {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #333333;
+}
+
+#lastSeedButton {
+    padding: 5px;
+    margin: 0px;
+}
+
+#gameSeedText {
+    width: 75px;
 }
 
 #mainMenu {
