@@ -190,14 +190,7 @@ svg {
     width: 100%;
     height: 100%;
     overflow: hidden;
-    z-index: -1;
-}
-
-#slideshow img {
-    flex: 0 0 auto; /* prevents images from stretching */
-    width: 60%;
-    height: 100%;
-    object-fit: cover;
+    z-index: -2;
 }
 
 @keyframes slideshow {
@@ -216,7 +209,28 @@ svg {
 }
 
 #slideshow img {
+    flex: 0 0 auto; /* prevents images from stretching */
+    width: 60%;
+    height: 100%;
+    object-fit: cover;
+    filter: grayscale(40%) sepia(70%) contrast(1.2) brightness(0.9);
     animation: slideshow 40s linear infinite;
+}
+
+@media (min-width: 1400px) {
+    #slideshow img {
+        margin: 0 -10px; /* Add negative margin to overlap at the edges */
+    }
+}
+
+#loreBackground {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: -1;
 }
 
 #gameOverText {
@@ -225,10 +239,10 @@ svg {
     font-weight: bold;
     color: white;
     text-shadow:
-        -1px -1px 0 #ffffff,
-         1px -1px 0 #ffffff,
-        -1px  1px 0 #ffffff,
-         1px  1px 0 #ffffff; /* Simulate stroke effect */
+        -1px -1px 0 #0f0f0f,
+         1px -1px 0 #0f0f0f,
+        -1px  1px 0 #0f0f0f,
+         1px  1px 0 #0f0f0f; /* Simulate stroke effect */
     z-index: 1;
 }
 
