@@ -115,13 +115,18 @@ label {
     color: #333333;
 }
 
-#lastSeedButton {
-    padding: 5px;
-    margin: 0px;
+svg {
+    vertical-align: middle;
 }
 
 #gameSeedText {
     width: 75px;
+}
+
+#lastSeedButton, #randomSeedButton {
+    margin: 0px;
+    padding: 5px;
+    height: 30px;
 }
 
 #mainMenu {

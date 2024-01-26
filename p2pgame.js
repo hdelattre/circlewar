@@ -19,6 +19,7 @@ const cameraCheckbox = document.getElementById('cameraCheckbox');
 const musicCheckbox = document.getElementById('musicCheckbox');
 const gameSeedText = document.getElementById('gameSeedText');
 const lastSeedButton = document.getElementById('lastSeedButton');
+const randomSeedButton = document.getElementById('randomSeedButton');
 const playAgainButton = document.getElementById('playAgainButton');
 const debugText = document.getElementById('debugText');
 let endCreditsAudio = null;
@@ -182,6 +183,10 @@ lastSeedButton.addEventListener('click', () => {
     if (lastSeed) {
         gameSeedText.value = lastSeed;
     }
+});
+
+randomSeedButton.addEventListener('click', () => {
+    gameSeedText.value = -1;
 });
 
 hostGameButton.addEventListener('click', () => {
