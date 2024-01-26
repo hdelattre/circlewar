@@ -39,14 +39,14 @@ body::-webkit-scrollbar {
 }
 
 button {
-    padding: 15px 30px; /* Increase button size */
+    padding: 15px 30px;
     font-size: 1em;
     cursor: pointer;
-    margin: 10px; /* Add some space around buttons */
-    border: none; /* Remove border */
-    background-color: #007bff; /* Bootstrap primary btn color for example */
+    margin: 10px;
+    border: none;
+    background-color: #007bff;
     color: white; /* Text color for buttons */
-    border-radius: 5px; /* Rounded corners for buttons */
+    border-radius: 5px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2); /* subtle shadow for depth */
     transition: background-color 0.3s; /* Smooth background color transition */
 }
@@ -56,25 +56,25 @@ button:hover {
 }
 
 button:focus {
-    outline: none; /* Remove focus outline */
+    outline: none;
 }
 
 #logoimage {
-    width: 256px; /* Make logo larger */
-    height: auto; /* Adjust height to maintain aspect ratio */
+    width: 256px;
+    height: auto;
 }
 
 input[type=range] {
-    width: 40%; /* Adjust width of sliders */
-    margin: 20px 0; /* Space above and below sliders */
+    width: 40%;
+    margin: 20px 0;
 }
 
 input[type="text"] {
     width: 120px;
-    padding: 4px 10px; /* Add padding to the input */
+    padding: 4px 10px;
     margin: 0 10px;
-    font-size: 1em; /* Adjust font size */
-    border: 1px solid #ccc; /* Add a border */
+    font-size: 1em;
+    border: 1px solid #ccc;
     border-radius: 5px; /* Add rounded corners */
     box-shadow: 0 2px 4px rgba(0,0,0,0.2); /* Add a subtle shadow */
     transition: border-color 0.3s, box-shadow 0.3s; /* Smooth transition for border and shadow */
@@ -88,24 +88,24 @@ input[type="text"]:focus {
 
 input[type="checkbox"] {
     appearance: none; /* Remove default checkbox appearance */
-    width: 20px; /* Set checkbox width */
-    height: 20px; /* Set checkbox height */
-    border: 2px solid #007bff; /* Add border to checkbox */
-    border-radius: 5px; /* Add rounded corners to checkbox */
-    background-color: white; /* Set checkbox background color */
-    cursor: pointer; /* Set cursor to pointer on hover */
+    width: 20px;
+    height: 20px;
+    border: 2px solid #007bff;
+    border-radius: 5px;
+    background-color: white;
+    cursor: pointer;
     transition: background-color 0.3s, border-color 0.3s; /* Smooth transition for background and border color */
-    vertical-align: middle; /* Adjust vertical alignment */
+    vertical-align: middle;
 }
 
 input[type="checkbox"]:checked {
-    background-color: #007bff; /* Change background color when checkbox is checked */
-    border-color: #007bff; /* Change border color when checkbox is checked */
+    background-color: #007bff;
+    border-color: #007bff;
 }
 
 input[type="checkbox"]:focus {
-    outline: none; /* Remove focus outline */
-    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.3); /* Add focus outline */
+    outline: none; /* Remove default focus outline */
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.3); /* Add better focus outline */
 }
 
 label {
@@ -130,7 +130,7 @@ label {
 }
 
 #subMenus {
-    align-items: center; /* Center items vertically */
+    align-items: center;
     padding: 20px 10px;
 }
 
@@ -145,8 +145,8 @@ label {
 
 @media (min-width: 750px) {
     #subMenus {
-        display: flex; /* Make it a flex container */
-        flex-direction: row; /* Arrange items horizontally */
+        display: flex;
+        flex-direction: row;
         justify-content: space-between; /* Distribute items evenly along the main axis */
     }
     #startMenu p {
@@ -175,7 +175,7 @@ label {
 }
 
 #slideshow {
-    display: flex; /* makes it a flex container */
+    display: flex;
     position: fixed;
     top: 0;
     left: 0;
