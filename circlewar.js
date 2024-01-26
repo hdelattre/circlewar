@@ -211,7 +211,6 @@ function getBaseDistance(startId, endId) {
 function getShortestPath(startBaseId, endBaseId, heuristic = getBaseDistance) {
     if (!game_config.roads_only || game_config.roads[startBaseId].indexOf(endBaseId) >= 0) { return [endBaseId]; }
 
-    const startBaseOwner = getBaseOwner(startBaseId);
     const visited = [];
     const queue = [];
     const prev = [];
@@ -254,10 +253,8 @@ function getShortestPath(startBaseId, endBaseId, heuristic = getBaseDistance) {
                 prev[neighborBaseId] = currentBaseId;
                 gScore[neighborBaseId] = tentativeGScore;
                 fScore[neighborBaseId] = gScore[neighborBaseId] + heuristic(neighborBaseId, endBaseId);
-                if (getBaseOwner(neighborBaseId) == startBaseOwner || neighborBaseId === endBaseId) {
-                    if (!queue.includes(neighborBaseId)) {
-                        queue.push(neighborBaseId);
-                    }
+                if (!queue.includes(neighborBaseId)) {
+                    queue.push(neighborBaseId);
                 }
             }
         }
