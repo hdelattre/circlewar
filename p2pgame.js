@@ -187,6 +187,7 @@ lastSeedButton.addEventListener('click', () => {
 
 randomSeedButton.addEventListener('click', () => {
     gameSeedText.value = -1;
+    setCookie(COOKIE_SEEDUSER, gameSeedText.value, cookieExpirationDays);
 });
 
 hostGameButton.addEventListener('click', () => {
