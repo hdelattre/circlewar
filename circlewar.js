@@ -51,10 +51,17 @@ let ai_controllers = [];
 
 // ------ GAME FUNCTIONS ------
 
+let shortestPathImpl = null;
+
 // All players init
 function initFromConfig(config) {
 
     game_config = config;
+
+    game_config.owned_adjacent = false;
+    if (game_config.roads_only) {
+        shortestPathImpl = game_config.bases.length < 120 ? shortestPath_Dijkstra : shortestPath_AStarBases;
+    }
 
     // Init seed
     if (config.seed < 0) {
@@ -208,9 +215,54 @@ function getBaseDistance(startId, endId) {
     return getDistance(game_config.bases[startId].location, game_config.bases[endId].location);
 }
 
-function getShortestPath(startBaseId, endBaseId, heuristic = getBaseDistance) {
+function getShortestPath(startBaseId, endBaseId) {
     if (!game_config.roads_only || game_config.roads[startBaseId].indexOf(endBaseId) >= 0) { return [endBaseId]; }
+    const ownedAdjacent = game_config.ownedAdjacent && game_config.roads_only;
+    return shortestPathImpl(startBaseId, endBaseId, ownedAdjacent);
+}
 
+function shortestPath_Dijkstra(startBaseId, endBaseId, ownedAdjacent) {
+    const startBaseOwner = getBaseOwner(startBaseId);
+    const visited = [];
+    const queue = [];
+    const prev = [];
+    queue.push(startBaseId);
+    visited[startBaseId] = true;
+    while (queue.length > 0) {
+        const currentBaseId = queue.shift();
+        const neighbors = game_config.roads[currentBaseId];
+        for (let i = 0; i < neighbors.length; i++) {
+            const neighborBaseId = neighbors[i];
+            if (ownedAdjacent && getBaseOwner(neighborBaseId) != startBaseOwner) continue;
+            if (!visited[neighborBaseId]) {
+                visited[neighborBaseId] = true;
+                prev[neighborBaseId] = currentBaseId;
+                if (neighborBaseId === endBaseId) {
+                    // Found the shortest path, reconstruct and return it
+                    const path = [];
+                    let baseId = endBaseId;
+                    while (baseId !== startBaseId) {
+                        path.unshift(baseId);
+                        baseId = prev[baseId];
+                    }
+                    return path;
+                }
+                queue.push(neighborBaseId);
+            }
+        }
+    }
+
+    // No path found
+    return null;
+
+}
+
+let shortestPath_AStarBases = function (startBaseId, endBaseId, ownedAdjacent) {
+    return shortestPath_AStar(startBaseId, endBaseId, ownedAdjacent, getBaseDistance);
+}
+
+function shortestPath_AStar(startBaseId, endBaseId, ownedAdjacent, heuristic = getBaseDistance) {
+    const startBaseOwner = getBaseOwner(startBaseId);
     const visited = [];
     const queue = [];
     const prev = [];
@@ -247,6 +299,7 @@ function getShortestPath(startBaseId, endBaseId, heuristic = getBaseDistance) {
         const neighbors = game_config.roads[currentBaseId];
         for (let i = 0; i < neighbors.length; i++) {
             const neighborBaseId = neighbors[i];
+            if (ownedAdjacent && getBaseOwner(neighborBaseId) != startBaseOwner) continue;
             const tentativeGScore = gScore[currentBaseId] + 1;
             if (!visited[neighborBaseId] || tentativeGScore < gScore[neighborBaseId]) {
                 visited[neighborBaseId] = true;
