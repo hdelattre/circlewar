@@ -21,6 +21,7 @@ const gameSeedText = document.getElementById('gameSeedText');
 const lastSeedButton = document.getElementById('lastSeedButton');
 const randomSeedButton = document.getElementById('randomSeedButton');
 const playAgainButton = document.getElementById('playAgainButton');
+const levelsDropdown = document.getElementById('levelsDropdown');
 const debugText = document.getElementById('debugText');
 let endCreditsAudio = null;
 
@@ -210,6 +211,28 @@ playAgainButton.addEventListener('click', () => {
         endCreditsAudio.pause();
         endCreditsAudio = null;
     }
+});
+
+challenge_levels.forEach((level, index) => {
+    const levelOption = document.createElement('option');
+    levelOption.value = index;
+    levelOption.textContent = level.name;
+    levelsDropdown.appendChild(levelOption);
+});
+
+levelsDropdown.addEventListener('change', () => {
+    if (levelsDropdown.value < 0) return;
+    const levelIndex = levelsDropdown.value;
+    const level = challenge_levels[levelIndex];
+    aiSlider.value = level.ai_players;
+    aiSliderLabel.textContent = level.ai_players;
+    mapSizeXText.value = level.map_size.x;
+    mapSizeYText.value = level.map_size.y;
+    roadsCheckbox.checked = true; // level.roads_enabled;
+    refreshMaxBases();
+    basesSlider.value = level.bases;
+    basesSliderLabel.textContent = level.bases;
+    gameSeedText.value = level.seed;
 });
 
 // ----- VIEW -----
