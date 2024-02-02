@@ -21,6 +21,7 @@ const gameSeedText = document.getElementById('gameSeedText');
 const lastSeedButton = document.getElementById('lastSeedButton');
 const randomSeedButton = document.getElementById('randomSeedButton');
 const playAgainButton = document.getElementById('playAgainButton');
+const gameGifButton = document.getElementById('gameGifButton');
 const levelsDropdown = document.getElementById('levelsDropdown');
 const debugText = document.getElementById('debugText');
 let endCreditsAudio = null;

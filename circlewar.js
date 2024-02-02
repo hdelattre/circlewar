@@ -157,6 +157,8 @@ function handlePlayerWin(winnerid) {
     const winning_player = game_state.players[winnerid];
     console.log('Player ' + winnerid + ' wins!');
     gameOver(winnerid, winning_player.name, winning_player.color);
+
+    addGifFrame(1000);
 }
 
 function getNumActivePlayers() {
@@ -1115,46 +1117,49 @@ const backgroundContext = backgroundCanvas.getContext('2d');
 const basesCanvas = document.createElement('canvas');
 const basesContext = basesCanvas.getContext('2d');
 let basesDrawDirty = false;
+let gifFrames = [];
+let drawsToNextSnapshot = 0;
+let downloadGifListener = null;
 
 // Draw the background on the offscreen canvas
 function drawBackground() {
     //todo
 }
 
-function drawBases() {
-    basesContext.clearRect(0, 0, canvas.width, canvas.height);
+function drawBases(basesState, drawCanvas, drawContext, scale = 1) {
+    drawContext.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
 
     game_config.roads.forEach((roads, id) => {
         const base = game_config.bases[id];
+        const lineWidth = 5 * scale;
         roads.forEach((roadid) => {
             const roadBase = game_config.bases[roadid];
-            const roadOwner = getBaseOwner(roadBase.id);
-            const roadColor = getBaseOwner(base.id) == roadOwner ? getPlayerColor(roadOwner) : 'gray';
-            basesContext.beginPath();
-            basesContext.strokeStyle = makeColorTranslucent(roadColor, 0.5);
-            basesContext.lineWidth = 5;
-            basesContext.lineCap = 'round';
-            basesContext.moveTo(base.location.x, base.location.y);
-            basesContext.lineTo(roadBase.location.x, roadBase.location.y);
-            basesContext.stroke();
+            const roadOwner = basesState[roadid].ownerid;
+            const baseOwner = basesState[base.id].ownerid;
+            const roadColor = baseOwner == roadOwner ? getPlayerColor(roadOwner) : 'gray';
+            drawContext.beginPath();
+            drawContext.strokeStyle = makeColorTranslucent(roadColor, 0.5);
+            drawContext.lineWidth = lineWidth;
+            drawContext.lineCap = 'round';
+            drawContext.moveTo(base.location.x * scale, base.location.y * scale);
+            drawContext.lineTo(roadBase.location.x * scale, roadBase.location.y * scale);
+            drawContext.stroke();
         });
     });
 
     // Render base streams and units text
+    const radius = baseRadius * scale;
     game_config.bases.forEach((base) => {
-        const { x, y } = base.location;
-        const baseState = game_state.bases[base.id];
-        const ownerid = baseState.ownerid;
-        const radius = baseRadius;
+        const x = base.location.x * scale;
+        const y = base.location.y * scale;
+        const ownerid = basesState[base.id].ownerid;
 
         // Draw the base circle
-        basesContext.beginPath();
-        basesContext.arc(x, y, radius, 0, 2 * Math.PI);
-        basesContext.fillStyle = getPlayerColor(ownerid);
-        basesContext.fill();
+        drawContext.beginPath();
+        drawContext.arc(x, y, radius, 0, 2 * Math.PI);
+        drawContext.fillStyle = getPlayerColor(ownerid);
+        drawContext.fill();
     });
-
-    basesDrawDirty = false;
 }
 
 function draw() {
@@ -1162,7 +1167,14 @@ function draw() {
     context.clearRect(0, 0, canvas.width, canvas.height);
 
     if (basesDrawDirty) {
-        drawBases();
+        drawBases(game_state.bases, basesCanvas, basesContext);
+        basesDrawDirty = false;
+
+        drawsToNextSnapshot -= 1;
+        if (drawsToNextSnapshot <= 0) {
+            drawsToNextSnapshot = 5;
+            addGifFrame();
+        }
     }
 
     // Draw the cached background onto the main canvas
@@ -1263,6 +1275,41 @@ function draw() {
     }
 }
 
+function addGifFrame(delay = 100) {
+    const frameState = game_state.bases.map((base) => {
+        return { ownerid: base.ownerid };
+    });
+    gifFrames.push({ frameState: frameState, delay: delay });
+}
+
+function renderGameGif() {
+    const gifScale = 0.5;
+    const gifWidth = Math.floor(basesCanvas.width * gifScale);
+    const gifHeight = Math.floor(basesCanvas.height * gifScale);
+    const gameGif = new GIF({width: gifWidth, height: gifHeight, workers: 2, quality: 5, workerScript: 'thirdparty/gifjs/gif.worker.js'});
+    gameGif.on('finished', (blob) => {
+        gameGifButton.removeEventListener("click", downloadGifListener);
+        downloadGifListener = () => {
+            const gifLink = document.createElement("a");
+            gifLink.href = gifUrl;
+            gifLink.download = "circlewar-game.gif"; // Specify the file name for downloading
+            gifLink.click();
+        };
+        const gifUrl = URL.createObjectURL(blob);
+        gameGifButton.textContent = "Download Game Gif";
+        gameGifButton.addEventListener("click", downloadGifListener);
+    });
+
+    gifFrames.forEach((gifFrame) => {
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = gifWidth;
+        tempCanvas.height = gifHeight;
+        drawBases(gifFrame.frameState, tempCanvas, tempCanvas.getContext('2d'), gifScale);
+        gameGif.addFrame(tempCanvas, {delay: gifFrame.delay});
+    });
+    gameGif.render();
+}
+
 // ------ GAME LOOP ------
 
 const frame_time = 1 / 60;
@@ -1320,6 +1367,18 @@ function startGame(game_options) {
     }
 
     drawBackground();
+    drawBases(game_state.bases, basesCanvas, basesContext);
+
+    gifFrames = [];
+    drawsToNextSnapshot = 0;
+    gameGifButton.textContent = "Generate Game Gif";
+    gameGifButton.removeEventListener("click", downloadGifListener);
+    downloadGifListener = () => {
+        gameGifButton.textContent = "Generating Gif...";
+        renderGameGif();
+    };
+    gameGifButton.addEventListener("click", downloadGifListener);
+    addGifFrame(1000);
 
     // Start the game loop
     lastFrameTime = performance.now();
