@@ -1336,6 +1336,7 @@ function stopGame() {
 const challenge_levels = [
     { name: 'Bunny Hill', seed: 234, ai_players: 1, bases: 16, map_size: { x: 400, y: 400 } },
     { name: 'GoodTime', seed: 89809, ai_players: 1, bases: 23, map_size: { x: 500, y: 400 } },
+    { name: 'Crescent', seed: 820505, ai_players: 4, bases: 20, map_size : { x: 1800, y: 900 } },
     { name: 'Stamford Bridge', seed: 815694, ai_players: 4, bases: 45, map_size: { x: 1900, y: 900 } },
     { name: 'The Gauntlet', seed: 740316, ai_players: 4, bases: 66, map_size: { x: 1800, y: 900 } },
     { name: 'Tryouts', seed: 688281, ai_players: 7, bases: 66, map_size: { x: 1700, y: 900 } },
