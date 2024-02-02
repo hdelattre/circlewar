@@ -287,3 +287,8 @@ svg {
     color: black;
     z-index: 100;
 }
+
+#gameGifImage {
+    width: 96%;
+    height: auto;
+}

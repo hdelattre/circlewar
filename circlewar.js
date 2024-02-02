@@ -1298,6 +1298,10 @@ function renderGameGif() {
         const gifUrl = URL.createObjectURL(blob);
         gameGifButton.textContent = "Download Game Gif";
         gameGifButton.addEventListener("click", downloadGifListener);
+
+        gameGifImage.src = gifUrl;
+        gameGifImage.style.display = "inline";
+        gameGifButton.style.display = "none";
     });
 
     gifFrames.forEach((gifFrame) => {
@@ -1371,6 +1375,8 @@ function startGame(game_options) {
 
     gifFrames = [];
     drawsToNextSnapshot = 0;
+    gameGifButton.style.display = "inline";
+    gameGifImage.style.display = "none";
     gameGifButton.textContent = "Generate Game Gif";
     gameGifButton.removeEventListener("click", downloadGifListener);
     downloadGifListener = () => {
