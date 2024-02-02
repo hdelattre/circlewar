@@ -1397,6 +1397,8 @@ const challenge_levels = [
     { name: 'GoodTime', seed: 89809, ai_players: 1, bases: 23, map_size: { x: 500, y: 400 } },
     { name: 'Crescent', seed: 820505, ai_players: 4, bases: 20, map_size : { x: 1800, y: 900 } },
     { name: 'Stamford Bridge', seed: 815694, ai_players: 4, bases: 45, map_size: { x: 1900, y: 900 } },
+    { name: 'Old Boy', seed: 520491, ai_players: 4, bases: 60, map_size: { x: 1800, y: 400 } },
+    { name: 'Older Boy', seed: 520491, ai_players: 4, bases: 60, map_size: { x: 1800, y: 80 } },
     { name: 'The Gauntlet', seed: 740316, ai_players: 4, bases: 66, map_size: { x: 1800, y: 900 } },
     { name: 'Tryouts', seed: 688281, ai_players: 7, bases: 66, map_size: { x: 1700, y: 900 } },
     { name: 'Impossible', seed: 295074, ai_players: 7, bases: 103, map_size: { x: 900, y: 900 } },
