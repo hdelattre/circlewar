@@ -75,6 +75,10 @@ function initFromConfig(config) {
     // Init map size
     canvas.width = config.map_size.x;
     canvas.height = config.map_size.y;
+    backgroundCanvas.width = canvas.width;
+    backgroundCanvas.height = canvas.height;
+    basesCanvas.width = canvas.width;
+    basesCanvas.height = canvas.height;
 }
 
 // Host only
@@ -113,6 +117,7 @@ function initGame(game_options) {
         };
         addBase(newBase, -1, 10);
     }
+    basesDrawDirty = true;
 
     // Init roads
     if (game_config.roads_only) {
@@ -395,6 +400,7 @@ function updateUnits(units, deltaTime, allow_capture = true) {
                         baseState.ownerid = unit.ownerid;
                         baseState.autotarget = null;
                         baseOwned = true;
+                        basesDrawDirty = true;
                     }
                 }
 
@@ -1104,21 +1110,19 @@ function updateState(deltaTime) {
 }
 
 // ------ RENDERING ------
-// Create an offscreen canvas to cache the background
-const offscreenCanvas = document.createElement('canvas');
-const offscreenCtx = offscreenCanvas.getContext('2d');
+const backgroundCanvas = document.createElement('canvas');
+const backgroundContext = backgroundCanvas.getContext('2d');
+const basesCanvas = document.createElement('canvas');
+const basesContext = basesCanvas.getContext('2d');
+let basesDrawDirty = false;
 
 // Draw the background on the offscreen canvas
 function drawBackground() {
     //todo
 }
 
-function draw() {
-    // Clear the canvas
-    context.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Draw the cached background onto the main canvas
-    context.drawImage(offscreenCanvas, 0, 0);
+function drawBases() {
+    basesContext.clearRect(0, 0, canvas.width, canvas.height);
 
     game_config.roads.forEach((roads, id) => {
         const base = game_config.bases[id];
@@ -1126,15 +1130,44 @@ function draw() {
             const roadBase = game_config.bases[roadid];
             const roadOwner = getBaseOwner(roadBase.id);
             const roadColor = getBaseOwner(base.id) == roadOwner ? getPlayerColor(roadOwner) : 'gray';
-            context.beginPath();
-            context.strokeStyle = makeColorTranslucent(roadColor, 0.5);
-            context.lineWidth = 5;
-            context.lineCap = 'round';
-            context.moveTo(base.location.x, base.location.y);
-            context.lineTo(roadBase.location.x, roadBase.location.y);
-            context.stroke();
+            basesContext.beginPath();
+            basesContext.strokeStyle = makeColorTranslucent(roadColor, 0.5);
+            basesContext.lineWidth = 5;
+            basesContext.lineCap = 'round';
+            basesContext.moveTo(base.location.x, base.location.y);
+            basesContext.lineTo(roadBase.location.x, roadBase.location.y);
+            basesContext.stroke();
         });
     });
+
+    // Render base streams and units text
+    game_config.bases.forEach((base) => {
+        const { x, y } = base.location;
+        const baseState = game_state.bases[base.id];
+        const ownerid = baseState.ownerid;
+        const radius = baseRadius;
+
+        // Draw the base circle
+        basesContext.beginPath();
+        basesContext.arc(x, y, radius, 0, 2 * Math.PI);
+        basesContext.fillStyle = getPlayerColor(ownerid);
+        basesContext.fill();
+    });
+
+    basesDrawDirty = false;
+}
+
+function draw() {
+    // Clear the canvas
+    context.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (basesDrawDirty) {
+        drawBases();
+    }
+
+    // Draw the cached background onto the main canvas
+    context.drawImage(backgroundCanvas, 0, 0);
+    context.drawImage(basesCanvas, 0, 0);
 
     // Render game objects
     game_config.bases.forEach((base) => {
@@ -1142,12 +1175,6 @@ function draw() {
         const baseState = game_state.bases[base.id];
         const ownerid = baseState.ownerid;
         const radius = baseRadius;
-
-        // Draw the base circle
-        context.beginPath();
-        context.arc(x, y, radius, 0, 2 * Math.PI);
-        context.fillStyle = getPlayerColor(ownerid);
-        context.fill();
 
         // Draw the player's stream image
         const playerStream = playerStreams[ownerid];
