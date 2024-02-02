@@ -1172,7 +1172,7 @@ function draw() {
 
         drawsToNextSnapshot -= 1;
         if (drawsToNextSnapshot <= 0) {
-            drawsToNextSnapshot = 5;
+            drawsToNextSnapshot = 2;
             addGifFrame();
         }
     }
@@ -1275,7 +1275,7 @@ function draw() {
     }
 }
 
-function addGifFrame(delay = 100) {
+function addGifFrame(delay = 50) {
     const frameState = game_state.bases.map((base) => {
         return { ownerid: base.ownerid };
     });
