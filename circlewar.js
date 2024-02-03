@@ -2,6 +2,7 @@
 // @author Hunter Delattre
 
 // ------ DOM ELEMENTS ------
+const gameWindow = document.getElementById('gameWindow');
 const canvas = document.getElementById('gameCanvas');
 const context = canvas.getContext('2d');
 
@@ -73,12 +74,7 @@ function initFromConfig(config) {
     }
 
     // Init map size
-    canvas.width = config.map_size.x;
-    canvas.height = config.map_size.y;
-    backgroundCanvas.width = canvas.width;
-    backgroundCanvas.height = canvas.height;
-    basesCanvas.width = canvas.width;
-    basesCanvas.height = canvas.height;
+    setGameCanvasSize(config.map_size.x, config.map_size.y);
 }
 
 // Host only
@@ -459,8 +455,38 @@ function checkForGestureNav() {
     }
 }
 
+function setGameCanvasSize(width, height) {
+    canvas.width = width;
+    canvas.height = height;
+    backgroundCanvas.width = canvas.width;
+    backgroundCanvas.height = canvas.height;
+    basesCanvas.width = canvas.width;
+    basesCanvas.height = canvas.height;
+
+    refreshCanvasStyleSize();
+}
+
+function refreshCanvasStyleSize() {
+    const aspectRatio = canvas.width / canvas.height;
+    const windowRatio = window.innerWidth / window.innerHeight;
+    // If window ratio is greater, height is the limiting factor
+    if (windowRatio > aspectRatio) {
+        canvas.style.width = 'auto';
+        canvas.style.height = '100%';
+    } else {
+        // Width is the limiting factor
+        canvas.style.width = '100%';
+        canvas.style.height = 'auto';
+    }
+}
+
+function handleWindowResize() {
+    refreshCanvasStyleSize();
+    checkForGestureNav();
+}
+
 // Listen for resize events which might indicate a change in navigation mode
-window.addEventListener('resize', checkForGestureNav);
+window.addEventListener('resize', handleWindowResize);
 
 const preventSwipeGesture = function(event) {
     const touchX = event.touches[0].location;
@@ -484,14 +510,14 @@ function setTouchInputsLockedToGame(inputs_locked) {
     }
 }
 
-canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
-canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
-canvas.addEventListener('touchend', handleTouchUp, { passive: false });
-canvas.addEventListener('touchcancel', handleTouchUp, { passive: false });
+gameWindow.addEventListener('touchstart', handleTouchStart, { passive: false });
+gameWindow.addEventListener('touchmove', handleTouchMove, { passive: false });
+gameWindow.addEventListener('touchend', handleTouchUp, { passive: false });
+gameWindow.addEventListener('touchcancel', handleTouchUp, { passive: false });
 
-canvas.addEventListener('mousedown', handleMouseDown);
-canvas.addEventListener('mousemove', handleMouseMove);
-canvas.addEventListener('mouseup', handleMouseUp);
+gameWindow.addEventListener('mousedown', handleMouseDown);
+gameWindow.addEventListener('mousemove', handleMouseMove);
+gameWindow.addEventListener('mouseup', handleMouseUp);
 
 let isDragging = false;
 let dragStartBase = null;

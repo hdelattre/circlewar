@@ -26,12 +26,26 @@ body::-webkit-scrollbar {
     align-items: center;
     justify-content: center;
     width: 100%;
+    height: 100%;
     user-select: none;
 }
 
-#gameCanvas {
+#gameStage {
     width: 100%;
-    height: auto;
+    height: 100%;
+}
+
+#gameWindow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    width: 100%;
+    height: 100%;
+}
+
+#gameCanvas {
     user-select: none;
 }
 
