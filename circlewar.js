@@ -651,9 +651,10 @@ function input_hoverLocation(location) {
         return;
     }
 
-    const newHoveredBase = selectBase(location, canDragBase);
+    const newHoveredBase = selectBase(location);
     if (!hoveredBase || !newHoveredBase || newHoveredBase.id != hoveredBase.id) {
-        hoveredBase = newHoveredBase;
+        const isOwnedBased = getBaseOwner(newHoveredBase.id) == controlledPlayerId;
+        hoveredBase = isOwnedBased ? newHoveredBase : null;
         hoveredTime = 0;
     }
 }
