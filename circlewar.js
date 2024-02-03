@@ -895,13 +895,12 @@ function updateAI_reinforceBases(ai_controller, ai_state) {
         if (adjacentUnowned != null) continue;
         let lastNumAdjacent = 0;
         const friendlyBase = ai_state.playerBases.length <= 1 ? null : ai_state.playerBases.reduce((prev, curr) => {
-            if (base.id == curr.id) return prev;
-            if (!canSendUnits(base.id, curr.id)) return prev;
+            if (base.id == curr.id || !canSendUnits(base.id, curr.id)) return prev;
             const numAdjacent = game_config.roads[base.id].filter((roadid) => { return getBaseOwner(roadid) != getBaseOwner(curr.id); }).length;
             if (numAdjacent < lastNumAdjacent) return prev;
             lastNumAdjacent = numAdjacent;
-            return getBaseUnits(prev.id) < getBaseUnits(curr.id) ? prev : curr;
-        });
+            return prev && getBaseUnits(prev.id) < getBaseUnits(curr.id) ? prev : curr;
+        }, null);
         if (friendlyBase == null) continue;
         const friendlyBaseState = game_state.bases[friendlyBase.id];
         const enemyTargeting = ai_state.enemyUnits.filter((unit) => unit.targetid == base.id);
@@ -928,10 +927,9 @@ function updateAI_greedyExpand(ai_controller, ai_state) {
             return true;
         }
         const neutralBase = ai_state.neutralBases.length <= 0 ? null : ai_state.neutralBases.reduce((prev, curr) => {
-            if (prev == null) return canTargetNeutralBase(curr) ? curr : null;
-            if (!canTargetNeutralBase(curr)) return canTargetNeutralBase(prev) ? prev : null;
-            return prev.trainingRate > curr.trainingRate ? prev : curr;
-        });
+            if (!canTargetNeutralBase(curr)) return prev;
+            return prev && prev.trainingRate > curr.trainingRate ? prev : curr;
+        }, null);
         if (neutralBase && baseState.units >= (getBaseUnits(neutralBase.id) + 3)) {
             const sendUnitCount = Math.floor(baseState.units);
             input_sendUnits(ai_controller.controlid, base.id, neutralBase.id, sendUnitCount);
@@ -953,10 +951,9 @@ function updateAI_attackExpand(ai_controller, ai_state) {
             return true;
         }
         const neutralBase = ai_state.neutralBases.length <= 0 ? null : ai_state.neutralBases.reduce((prev, curr) => {
-            if (prev == null) return canTargetNeutralBase(curr) ? curr : null;
-            if (!canTargetNeutralBase(curr)) return canTargetNeutralBase(prev) ? prev : null;
-            return prev.trainingRate > curr.trainingRate ? prev : curr;
-        });
+            if (!canTargetNeutralBase(curr)) return prev;
+            return prev && prev.trainingRate > curr.trainingRate ? prev : curr;
+        }, null);
 
         function canTargetEnemyBase(targetBase) {
             if (!canSendUnits(base.id, targetBase.id)) return false;
@@ -964,12 +961,12 @@ function updateAI_attackExpand(ai_controller, ai_state) {
             return true;
         }
         const enemyBase = ai_state.enemyBases.length <= 0 ? null : ai_state.enemyBases.reduce((prev, curr) => {
-            if (prev == null) return canTargetEnemyBase(curr) ? curr : null;
-            if (!canTargetEnemyBase(curr)) return canTargetEnemyBase(prev) ? prev : null;
+            if (!canTargetEnemyBase(curr)) return prev;
             const currUnits = getBaseUnits(curr.id);
+            if (prev == null) return curr;
             if (currUnits < baseState.units + 2 && getBaseUnits(prev.id) > currUnits + 2) return curr;
             return prev.trainingRate > curr.trainingRate ? prev : curr;
-        });
+        }, null);
         if (enemyBase && baseState.units >= (game_state.bases[enemyBase.id].units + 15)) {
             const sendUnitCount = Math.floor(baseState.units);
             input_sendUnits(ai_controller.controlid, base.id, enemyBase.id, sendUnitCount);
@@ -995,12 +992,12 @@ function updateAI_zergRush(ai_controller, ai_state) {
             return true;
         };
         const enemyBase = ai_state.enemyBases.length <= 0 ? null : ai_state.enemyBases.reduce((prev, curr) => {
-            if (prev == null) return canTargetEnemyBase(curr) ? curr : null;
-            if (!canTargetEnemyBase(curr)) return canTargetEnemyBase(prev) ? prev : null;
+            if (!canTargetEnemyBase(curr)) return prev;
             const currUnits = getBaseUnits(curr.id);
+            if (prev == null) return curr;
             if (currUnits < 10 && currUnits < getBaseUnits(prev.id)) return curr;
             return prev.trainingRate > curr.trainingRate ? prev : curr;
-        });
+        }, null);
         if (enemyBase) {
             const sendUnitCount = Math.floor(baseState.units);
             input_sendUnits(ai_controller.controlid, base.id, enemyBase.id, sendUnitCount);
