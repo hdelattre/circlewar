@@ -522,15 +522,22 @@ function getMouseLocation(event) {
 }
 
 function getBaseSelectRadius(base) {
-    return baseRadius + selectMargin;
+    const selectRadius = baseRadius + selectMargin;
+    return selectRadius;
+}
+
+function getZoomFactor() {
+    return canvas.width / canvas.clientWidth;
 }
 
 function selectBase(location, canSelect = () => true) {
     let minDistance = Infinity;
+    const zoomFactor = getZoomFactor();
     return game_config.bases.reduce((prev, curr) => {
         if (!canSelect(curr)) return prev;
         const distance = getDistance(location, curr.location);
-        if (getBaseSelectRadius(curr) < distance) return prev;
+        const selectRadius = getBaseSelectRadius(curr) * zoomFactor;
+        if (distance > selectRadius) return prev;
         if (distance < minDistance) {
             minDistance = distance;
             return curr;
@@ -621,7 +628,7 @@ function input_hoverLocation(location) {
         hoveredBase = selectBase(location, canDragBase);
         hoveredTime = 0;
     }
-    else if (getDistance(hoveredBase.location, location) > getBaseSelectRadius(hoveredBase)) {
+    else if (getDistance(hoveredBase.location, location) > (getBaseSelectRadius(hoveredBase) * getZoomFactor())) {
         hoveredBase = null;
     }
 }
