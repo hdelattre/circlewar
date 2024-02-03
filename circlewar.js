@@ -1126,7 +1126,40 @@ function drawBackground() {
     //todo
 }
 
-function drawBases(basesState, drawCanvas, drawContext, scale = 1) {
+function drawBases_Game(bases, basesState, drawContext, scale = 1) {
+    bases.forEach((base) => {
+        const x = base.location.x * scale;
+        const y = base.location.y * scale;
+        const ownerid = basesState[base.id].ownerid;
+        const radius = baseRadius * scale;
+
+        // Draw the base circle
+        drawContext.beginPath();
+        drawContext.arc(x, y, radius, 0, 2 * Math.PI);
+        drawContext.fillStyle = getPlayerColor(ownerid);
+        drawContext.fill();
+    });
+}
+
+function drawBases_Map(bases, basesState, drawContext, scale = 1) {
+    bases.forEach((base) => {
+        const x = base.location.x * scale;
+        const y = base.location.y * scale;
+        const baseState = basesState[base.id];
+        const ownerid = baseState.ownerid;
+        // scale size with unit count
+        const unitscale = Math.min(4, 0.5 + (baseState.units / 50));
+        const radius = baseRadius * scale * unitscale;
+
+        // Draw the base circle
+        drawContext.beginPath();
+        drawContext.arc(x, y, radius, 0, 2 * Math.PI);
+        drawContext.fillStyle = getPlayerColor(ownerid);
+        drawContext.fill();
+    });
+}
+
+function drawMap(basesState, drawCanvas, drawContext, scale = 1, drawBasesImpl = drawBases_Game) {
     drawContext.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
 
     game_config.roads.forEach((roads, id) => {
@@ -1147,19 +1180,7 @@ function drawBases(basesState, drawCanvas, drawContext, scale = 1) {
         });
     });
 
-    // Render base streams and units text
-    const radius = baseRadius * scale;
-    game_config.bases.forEach((base) => {
-        const x = base.location.x * scale;
-        const y = base.location.y * scale;
-        const ownerid = basesState[base.id].ownerid;
-
-        // Draw the base circle
-        drawContext.beginPath();
-        drawContext.arc(x, y, radius, 0, 2 * Math.PI);
-        drawContext.fillStyle = getPlayerColor(ownerid);
-        drawContext.fill();
-    });
+    drawBasesImpl(game_config.bases, basesState, drawContext, scale);
 }
 
 function draw() {
@@ -1167,7 +1188,7 @@ function draw() {
     context.clearRect(0, 0, canvas.width, canvas.height);
 
     if (basesDrawDirty) {
-        drawBases(game_state.bases, basesCanvas, basesContext);
+        drawMap(game_state.bases, basesCanvas, basesContext);
         basesDrawDirty = false;
 
         drawsToNextSnapshot -= 1;
@@ -1277,7 +1298,7 @@ function draw() {
 
 function addGifFrame(delay = 50) {
     const frameState = game_state.bases.map((base) => {
-        return { ownerid: base.ownerid };
+        return { ownerid: base.ownerid, units: base.units };
     });
     gifFrames.push({ frameState: frameState, delay: delay });
 }
@@ -1308,7 +1329,7 @@ function renderGameGif() {
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = gifWidth;
         tempCanvas.height = gifHeight;
-        drawBases(gifFrame.frameState, tempCanvas, tempCanvas.getContext('2d'), gifScale);
+        drawMap(gifFrame.frameState, tempCanvas, tempCanvas.getContext('2d'), gifScale, drawBases_Map);
         gameGif.addFrame(tempCanvas, {delay: gifFrame.delay});
     });
     gameGif.render();
@@ -1371,7 +1392,7 @@ function startGame(game_options) {
     }
 
     drawBackground();
-    drawBases(game_state.bases, basesCanvas, basesContext);
+    drawMap(game_state.bases, basesCanvas, basesContext);
 
     gifFrames = [];
     drawsToNextSnapshot = 0;
