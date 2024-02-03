@@ -625,12 +625,10 @@ function input_hoverLocation(location) {
         return;
     }
 
-    if (!hoveredBase) {
-        hoveredBase = selectBase(location, canDragBase);
+    const newHoveredBase = selectBase(location, canDragBase);
+    if (!hoveredBase || !newHoveredBase || newHoveredBase.id != hoveredBase.id) {
+        hoveredBase = newHoveredBase;
         hoveredTime = 0;
-    }
-    else if (getDistance(hoveredBase.location, location) > (getBaseSelectRadius(hoveredBase) * getZoomFactor())) {
-        hoveredBase = null;
     }
 }
 
