@@ -1493,5 +1493,6 @@ const challenge_levels = [
     { name: 'Older Boy', seed: 520491, ai_players: 4, bases: 60, map_size: { x: 1800, y: 80 } },
     { name: 'The Gauntlet', seed: 740316, ai_players: 4, bases: 66, map_size: { x: 1800, y: 900 } },
     { name: 'Tryouts', seed: 688281, ai_players: 7, bases: 66, map_size: { x: 1700, y: 900 } },
+    { name: 'Broken Circle', seed: 283828, ai_players: 7, bases: 52, map_size: { x: 900, y: 900 } },
     { name: 'Impossible', seed: 295074, ai_players: 7, bases: 103, map_size: { x: 900, y: 900 } },
 ]
