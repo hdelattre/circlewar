@@ -158,7 +158,7 @@ function handlePlayerWin(winnerid) {
     console.log('Player ' + winnerid + ' wins!');
     gameOver(winnerid, winning_player.name, winning_player.color);
 
-    addGifFrame(1000);
+    addGifStateFrame(1000);
 }
 
 function getNumActivePlayers() {
@@ -403,6 +403,7 @@ function updateUnits(units, deltaTime, allow_capture = true) {
                         baseState.autotarget = null;
                         baseOwned = true;
                         basesDrawDirty = true;
+                        dirtyBaseCaptures.push({ baseid: targetBase.id, ownerid: baseState.ownerid });
                     }
                 }
 
@@ -1129,6 +1130,7 @@ const backgroundContext = backgroundCanvas.getContext('2d');
 const basesCanvas = document.createElement('canvas');
 const basesContext = basesCanvas.getContext('2d');
 let basesDrawDirty = false;
+let dirtyBaseCaptures = [];
 let gifFrames = [];
 let drawsToNextSnapshot = 0;
 let downloadGifListener = null;
@@ -1206,7 +1208,10 @@ function draw() {
         drawsToNextSnapshot -= 1;
         if (drawsToNextSnapshot <= 0) {
             drawsToNextSnapshot = 2;
-            addGifFrame();
+            if (dirtyBaseCaptures.length > 0) {
+                addGifDeltaFrame(dirtyBaseCaptures.slice());
+                dirtyBaseCaptures = [];
+            }
         }
     }
 
@@ -1308,11 +1313,21 @@ function draw() {
     }
 }
 
-function addGifFrame(delay = 50) {
+const GIF_STATE = 0;
+const GIF_DELTA = 1;
+
+function addGifStateFrame(delay = 50) {
     const frameState = game_state.bases.map((base) => {
         return { ownerid: base.ownerid, units: base.units };
     });
-    gifFrames.push({ frameState: frameState, delay: delay });
+    gifFrames.push({ type: GIF_STATE, frameState: frameState, delay: delay });
+}
+
+function addGifDeltaFrame(baseCaptures, delay = 50) {
+    const baseUnits = game_state.bases.map((base) => {
+        return base.units;
+    });
+    gifFrames.push({ type: GIF_DELTA, baseCaptures: baseCaptures, baseUnits: baseUnits, delay: delay });
 }
 
 function renderGameGif() {
@@ -1337,11 +1352,25 @@ function renderGameGif() {
         gameGifButton.style.display = "none";
     });
 
+    let lastFrameState = null;
     gifFrames.forEach((gifFrame) => {
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = gifWidth;
         tempCanvas.height = gifHeight;
-        drawMap(gifFrame.frameState, tempCanvas, tempCanvas.getContext('2d'), gifScale, drawBases_Map);
+        if (gifFrame.type == GIF_STATE) {
+            lastFrameState = gifFrame.frameState;
+        }
+        else if (gifFrame.type == GIF_DELTA) {
+            gifFrame.baseCaptures.forEach((baseCapture) => {
+                const baseState = lastFrameState[baseCapture.baseid];
+                baseState.ownerid = baseCapture.ownerid;
+            });
+            gifFrame.baseUnits.forEach((baseUnit, index) => {
+                lastFrameState[index].units = baseUnit;
+            });
+        }
+
+        drawMap(lastFrameState, tempCanvas, tempCanvas.getContext('2d'), gifScale, drawBases_Map);
         gameGif.addFrame(tempCanvas, {delay: gifFrame.delay});
     });
     gameGif.render();
@@ -1417,7 +1446,7 @@ function startGame(game_options) {
         renderGameGif();
     };
     gameGifButton.addEventListener("click", downloadGifListener);
-    addGifFrame(1000);
+    addGifStateFrame(1000);
 
     // Start the game loop
     lastFrameTime = performance.now();
