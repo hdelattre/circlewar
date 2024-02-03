@@ -525,6 +525,20 @@ function getBaseSelectRadius(base) {
     return baseRadius + selectMargin;
 }
 
+function selectBase(location, canSelect = () => true) {
+    let minDistance = Infinity;
+    return game_config.bases.reduce((prev, curr) => {
+        if (!canSelect(curr)) return prev;
+        const distance = getDistance(location, curr.location);
+        if (getBaseSelectRadius(curr) < distance) return prev;
+        if (distance < minDistance) {
+            minDistance = distance;
+            return curr;
+        }
+        return prev;
+    }, null);
+}
+
 function handleMouseDown(event) {
     dragLocation = getMouseLocation(event);
     input_clickLocation(dragLocation);
@@ -586,10 +600,7 @@ function resetDragging() {
 function input_clickLocation(location) {
     doubleClick = (lastFrameTime - lastClickTime) < doubleClickMs;
     lastClickTime = lastFrameTime;
-    const selectedBase = game_config.bases.find((base) => {
-        if (!canDragBase(base)) return false;
-        return getDistance(location, base.location) <= getBaseSelectRadius(base);
-    });
+    const selectedBase = selectBase(location, canDragBase);
 
     if (selectedBase) {
         resetDragging();
@@ -607,10 +618,7 @@ function input_hoverLocation(location) {
     }
 
     if (!hoveredBase) {
-        hoveredBase = hoveredBase || game_config.bases.find((base) => {
-            if (getBaseOwner(base.id) != getBaseOwner(dragStartBase.id)) return false;
-            return getDistance(location, base.location) <= getBaseSelectRadius(base);
-        });
+        hoveredBase = selectBase(location, canDragBase);
         hoveredTime = 0;
     }
     else if (getDistance(hoveredBase.location, location) > getBaseSelectRadius(hoveredBase)) {
@@ -625,10 +633,7 @@ function input_releaseLocation(location) {
         return;
     }
 
-    dragEndBase = game_config.bases.find((base) => {
-        return getDistance(location, base.location) <= getBaseSelectRadius(base);
-    });
-
+    dragEndBase = selectBase(location);
     if (dragStartBase && dragEndBase) {
         selectedBases.forEach((id) => {
             if (getBaseOwner(id) != getBaseOwner(dragStartBase.id)) return;
