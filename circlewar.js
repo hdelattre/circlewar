@@ -673,8 +673,7 @@ function input_hoverLocation(location) {
 
     const newHoveredBase = selectBase(location);
     if (!hoveredBase || !newHoveredBase || newHoveredBase.id != hoveredBase.id) {
-        const isOwnedBased = getBaseOwner(newHoveredBase.id) == controlledPlayerId;
-        hoveredBase = isOwnedBased ? newHoveredBase : null;
+        hoveredBase = newHoveredBase && getBaseOwner(newHoveredBase.id) == controlledPlayerId ? newHoveredBase : null;
         hoveredTime = 0;
     }
 }
