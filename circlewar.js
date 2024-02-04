@@ -796,10 +796,10 @@ function updateGameState(new_game_state) {
     }
 }
 
-const MESSAGE_GAMESTATE = 'gameState';
-const MESSAGE_STARTGAME = 'startGame';
-const MESSAGE_PLAYERWIN = 'playerWin';
-const MESSAGE_UNITSMOVED = 'unitsMoved';
+const MESSAGE_GAMESTATE = 0;
+const MESSAGE_STARTGAME = 1;
+const MESSAGE_PLAYERWIN = 2;
+const MESSAGE_UNITSMOVED = 3;
 
 function handleMessage(message) {
     console.log(message);
