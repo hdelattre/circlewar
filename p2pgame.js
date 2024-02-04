@@ -24,6 +24,7 @@ const playAgainButton = document.getElementById('playAgainButton');
 const gameGifButton = document.getElementById('gameGifButton');
 const gameGifImage = document.getElementById('gameGifImage');
 const levelsDropdown = document.getElementById('levelsDropdown');
+const autoSaveCheckbox = document.getElementById('autoSaveCheckbox');
 const debugText = document.getElementById('debugText');
 let endCreditsAudio = null;
 
@@ -60,6 +61,7 @@ const COOKIE_MAPSIZEX = 'mapSizeX';
 const COOKIE_MAPSIZEY = 'mapSizeY';
 const COOKIE_SEEDUSER = 'userSeed';
 const COOKIE_SEEDLAST = 'lastSeed';
+const COOKIE_AUTOSAVE = 'autoSave';
 const COOKIE_GAMEACTIVE = 'gameActive';
 const COOKIE_GAMEACTIVE_SINGLEPLAYER = 1;
 
@@ -73,6 +75,7 @@ function loadSettingsFromCookies() {
     const mapSizeXValue = getCookie(COOKIE_MAPSIZEX);
     const mapSizeYValue = getCookie(COOKIE_MAPSIZEY);
     const userSeedValue = getCookie(COOKIE_SEEDUSER);
+    const autoSaveCheckboxValue = getCookie(COOKIE_AUTOSAVE);
     const gameActiveValue = getCookie(COOKIE_GAMEACTIVE);
 
     if (aiSliderValue) {
@@ -105,6 +108,10 @@ function loadSettingsFromCookies() {
 
     if (userSeedValue) {
         gameSeedText.value = userSeedValue;
+    }
+
+    if (autoSaveCheckboxValue) {
+        autoSaveCheckbox.checked = autoSaveCheckboxValue == 'true';
     }
 
     if (musicCheckboxValue) {
@@ -145,6 +152,7 @@ const updateSetting_AI = () => { aiSliderLabel.textContent = aiSlider.value; set
 const updateSetting_bases = () => { basesSliderLabel.textContent = basesSlider.value; setCookie(COOKIE_BASES, basesSlider.value, cookieExpirationDays); };
 const updateSetting_gameSpeed = () => { gameSpeedLabel.textContent = gameSpeedSlider.value; setCookie(COOKIE_GAME_SPEED, gameSpeedSlider.value, cookieExpirationDays); };
 const updateSetting_roads = () => { setCookie(COOKIE_ROADS, roadsCheckbox.checked, cookieExpirationDays); };
+const updateSetting_autoSave = () => { setCookie(COOKIE_AUTOSAVE, autoSaveCheckbox.checked, cookieExpirationDays); };
 const updateSetting_music = () => { setCookie(COOKIE_MUSIC, musicCheckbox.checked, cookieExpirationDays); };
 const updateSetting_camera = () => { setCookie(COOKIE_CAMERA, cameraCheckbox.checked, cookieExpirationDays); };
 
@@ -152,6 +160,7 @@ aiSlider.oninput = updateSetting_AI;
 basesSlider.oninput = updateSetting_bases;
 gameSpeedSlider.oninput = updateSetting_gameSpeed;
 roadsCheckbox.oninput = updateSetting_roads;
+autoSaveCheckbox.oninput = updateSetting_autoSave;
 musicCheckbox.oninput = updateSetting_music;
 cameraCheckbox.oninput = updateSetting_camera;
 

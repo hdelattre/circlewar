@@ -88,6 +88,7 @@ function initGame(game_options) {
         bases: [],
         roads: [],
         roads_only: game_options.roads_enabled,
+        ai_players: game_options.num_ai_players,
     }
 
     initFromConfig(config);
@@ -141,11 +142,43 @@ function initGame(game_options) {
         addPlayer(player.name);
     });
 
-    const num_ai = game_options.num_ai_players;
+    const num_ai = game_config.ai_players;
     const ai_names = [ 'HERB', 'ROSEMARY', 'THYME', 'SAGE', 'OREGANO', 'BASIL', 'MINT', 'PARSLEY', 'DILL', 'CHIVE' ];
     for (let i = 0; i < num_ai; i++) {
         addAIPlayer(ai_names[i]);
     }
+}
+
+function saveGame() {
+    localStorage.setItem('game_config', JSON.stringify(game_config));
+    localStorage.setItem('game_state', JSON.stringify(game_state));
+}
+
+function saveGameState() {
+    localStorage.setItem('game_state', JSON.stringify(game_state));
+}
+
+function loadGame() {
+    const savedConfigStr = localStorage.getItem('game_config');
+    if (savedConfigStr == null) return;
+    const savedConfig = JSON.parse(savedConfigStr);
+    const configMatches = game_config.seed == savedConfig.seed &&
+        game_config.map_size.x == savedConfig.map_size.x &&
+        game_config.map_size.y == savedConfig.map_size.y &&
+        game_config.roads_only == savedConfig.roads_only &&
+        game_config.bases.length == savedConfig.bases.length &&
+        game_config.ai_players == savedConfig.ai_players;
+
+    if (configMatches) {
+        game_state = JSON.parse(localStorage.getItem('game_state'));
+        return true;
+    }
+    return false;
+}
+
+function clearSaveGame() {
+    localStorage.removeItem('game_config');
+    localStorage.removeItem('game_state');
 }
 
 function handlePlayerWin(winnerid) {
@@ -153,6 +186,8 @@ function handlePlayerWin(winnerid) {
     const winning_player = game_state.players[winnerid];
     console.log('Player ' + winnerid + ' wins!');
     gameOver(winnerid, winning_player.name, winning_player.color);
+
+    clearSaveGame();
 
     addGifStateFrame(1000);
 }
@@ -1437,6 +1472,9 @@ function update(timestamp) {
         lastFrameTime = timestamp;
         updateState(deltaTime);
         draw();
+        if (autoSaveCheckbox.checked) {
+            saveGameState();
+        }
     }
 
     if (isHost()) {
@@ -1463,9 +1501,11 @@ function startGame(game_options) {
     if (isHost()) {
         controlledPlayerId = 0;
         initGame(game_options);
+        if (!autoSaveCheckbox.checked || !loadGame()) {
+            saveGame();
+        }
     }
-    else // init client
-    {
+    else { // init client
         if (cameraCheckbox.checked) {
             startCamera(controlledPlayerId);
         }
