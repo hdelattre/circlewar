@@ -590,7 +590,7 @@ function getBaseSelectRadius(base) {
 }
 
 function getCanvasScaleFactor() {
-    return canvas.width / canvas.clientWidth;
+    return canvas.clientWidth / canvas.width;
 }
 
 function getZoomFactor() {
@@ -599,11 +599,11 @@ function getZoomFactor() {
 
 function selectBase(location, canSelect = () => true) {
     let minDistance = Infinity;
-    const zoomFactor = getCanvasScaleFactor() * getZoomFactor();
+    const selectZoomFactor = getZoomFactor() * getCanvasScaleFactor();
     return game_config.bases.reduce((prev, curr) => {
         if (!canSelect(curr)) return prev;
         const distance = getDistance(location, curr.location);
-        const selectRadius = getBaseSelectRadius(curr) * zoomFactor;
+        const selectRadius = getBaseSelectRadius(curr) / selectZoomFactor;
         if (distance > selectRadius) return prev;
         if (distance < minDistance) {
             minDistance = distance;
