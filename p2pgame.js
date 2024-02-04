@@ -280,6 +280,14 @@ function getPeerPlayerIndex(peerId) {
     });
 };
 
+function showDebugText(text, timeout = 0) {
+    debugText.textContent = text;
+    if (timeout <= 0) return;
+    window.setTimeout(() => {
+        debugText.textContent = '';
+    }, timeout);
+}
+
 function initRandomSeed(game_options) {
     if (game_options.seed < 0) {
         game_options.seed = Math.floor(Math.random() * 1000000);
@@ -287,10 +295,7 @@ function initRandomSeed(game_options) {
 
     setCookie(COOKIE_SEEDLAST, game_options.seed, cookieExpirationDays);
 
-    debugText.textContent = 'Seed: ' + game_options.seed;
-    window.setTimeout(() => {
-        debugText.textContent = '';
-    }, 5000);
+    showDebugText('Seed: ' + game_options.seed, 5000);
 }
 
 function startSinglePlayerGame() {
