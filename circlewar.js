@@ -1462,7 +1462,7 @@ let nextStateUpdate = stateUpdateInterval;
 
 function update(timestamp) {
     if (lastFrameTime == null) return;
-    const deltaTime = (timestamp - lastFrameTime) / 1000 * game_state.speed;
+    const deltaTime = (timestamp - lastFrameTime) / 1000;
 
     if (deltaTime > 1) {
         // Skip simulating the frame if the delta time is too large
@@ -1470,7 +1470,7 @@ function update(timestamp) {
     }
     else if (deltaTime >= frame_time) {
         lastFrameTime = timestamp;
-        updateState(deltaTime);
+        updateState(deltaTime * game_state.speed);
         draw();
         if (autoSaveCheckbox.checked) {
             saveGameState();
