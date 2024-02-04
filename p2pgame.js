@@ -5,7 +5,10 @@
 
 const hostGameButton = document.getElementById('hostGameButton');
 const joinGameButton = document.getElementById('joinGameButton');
+const mapEditorButton = document.getElementById('mapEditorButton');
+const pasteMapButton = document.getElementById('pasteMapButton');
 const singlePlayerButton = document.getElementById('singlePlayerButton');
+const generationOptionsDiv = document.getElementById('mapGenerationOptions');
 const aiSlider = document.getElementById('numAIPlayersSlider');
 const aiSliderLabel = document.getElementById('numAIPlayersValue');
 const basesSlider = document.getElementById('numBasesSlider');
@@ -51,6 +54,9 @@ function getCookie(name) {
     return null;
 }
 
+const cookieExpirationDays = 30;
+
+const COOKIE_LEVEL = 'level';
 const COOKIE_AI = 'ai';
 const COOKIE_BASES = 'bases';
 const COOKIE_GAME_SPEED = 'gameSpeed';
@@ -66,6 +72,7 @@ const COOKIE_GAMEACTIVE = 'gameActive';
 const COOKIE_GAMEACTIVE_SINGLEPLAYER = 1;
 
 function loadSettingsFromCookies() {
+    const cookieLevelValue = getCookie(COOKIE_LEVEL);
     const aiSliderValue = getCookie(COOKIE_AI);
     const basesSliderValue = getCookie(COOKIE_BASES);
     const gameSpeedSliderValue = getCookie(COOKIE_GAME_SPEED);
@@ -136,10 +143,13 @@ function loadSettingsFromCookies() {
             joinGame(gameActiveValue);
         }
     }
-}
 
-// Never expire cookies
-const cookieExpirationDays = 30;
+    refreshLevelsList();
+
+    if (cookieLevelValue) {
+        setSelectedLevelName(cookieLevelValue);
+    }
+}
 
 // Load settings values from cookies when the page loads
 window.addEventListener('load', () => {
@@ -147,6 +157,9 @@ window.addEventListener('load', () => {
 });
 
 // ----- MENU -----
+
+const LEVELINDEX_CUSTOMMAPS = -2;
+const LEVELINDEX_NULL = -1;
 
 const updateSetting_AI = () => { aiSliderLabel.textContent = aiSlider.value; setCookie(COOKIE_AI, aiSlider.value, cookieExpirationDays); };
 const updateSetting_bases = () => { basesSliderLabel.textContent = basesSlider.value; setCookie(COOKIE_BASES, basesSlider.value, cookieExpirationDays); };
@@ -163,6 +176,109 @@ roadsCheckbox.oninput = updateSetting_roads;
 autoSaveCheckbox.oninput = updateSetting_autoSave;
 musicCheckbox.oninput = updateSetting_music;
 cameraCheckbox.oninput = updateSetting_camera;
+
+function setSelectedLevelName(levelName) {
+    for (let i = 0, n = levelsDropdown.options.length; i < n; i++) {
+        const option = levelsDropdown.options[i];
+        if (option.textContent == levelName) {
+            levelsDropdown.selectedIndex = i;
+            setSelectedLevel(levelsDropdown.value);
+            return;
+        }
+    }
+}
+
+function setSelectedLevel(levelIndex) {
+    if (levelIndex == LEVELINDEX_CUSTOMMAPS) {
+        generationOptionsDiv.style.display = 'none';
+        return;
+    }
+    if (levelsDropdown.value < 0) return;
+    generationOptionsDiv.style.display = 'block';
+    const level = challenge_levels[levelIndex];
+    aiSlider.value = level.ai_players;
+    aiSliderLabel.textContent = level.ai_players;
+    mapSizeXText.value = level.map_size.x;
+    mapSizeYText.value = level.map_size.y;
+    roadsCheckbox.checked = true; // level.roads_enabled;
+    refreshMaxBases();
+    basesSlider.value = level.bases;
+    basesSliderLabel.textContent = level.bases;
+    gameSeedText.value = level.seed;
+}
+
+function refreshLevelsList() {
+
+    levelsDropdown.innerHTML = '';
+
+    const customMapsHeaderOption = document.createElement('option');
+    customMapsHeaderOption.value = LEVELINDEX_NULL;
+    customMapsHeaderOption.textContent = '-----';
+    levelsDropdown.appendChild(customMapsHeaderOption);
+
+    challenge_levels.forEach((level, index) => {
+        const levelOption = document.createElement('option');
+        levelOption.value = index;
+        levelOption.textContent = level.name;
+        levelsDropdown.appendChild(levelOption);
+    });
+
+    const mapsHeaderOption = document.createElement('option');
+    mapsHeaderOption.value = -1;
+    mapsHeaderOption.textContent = '----Custom Maps----';
+    levelsDropdown.appendChild(mapsHeaderOption);
+
+    const mapListStr = localStorage.getItem('mapList');
+    if (mapListStr) {
+        const mapList = JSON.parse(mapListStr);
+        mapList.forEach((mapName) => {
+            addCustomMapToList(mapName);
+        });
+    }
+}
+
+function addCustomMapToList(mapName) {
+    const mapOption = document.createElement('option');
+    mapOption.value = LEVELINDEX_CUSTOMMAPS;
+    mapOption.textContent = mapName;
+    levelsDropdown.appendChild(mapOption);
+}
+
+function pasteMap() {
+    if (isGameStarted()) return;
+
+    function setPasteText(text) {
+        pasteMapButton.textContent = text;
+        setTimeout(() => {
+            pasteMapButton.textContent = "Paste Map";
+        }, 1000);
+    }
+    const invalidMapText = "Invalid Map!";
+
+    navigator.clipboard.readText().then(
+        (text) => {
+            let mapConfig = null;
+            try {
+                mapConfig = JSON.parse(text);
+            } catch (error) {
+                // Invalid JSON
+            }
+            if (mapConfig && saveMap(mapConfig)) {
+                setSelectedLevelName(mapConfig.map_name);
+                setPasteText("Map Saved!");
+                return;
+            }
+            setPasteText(invalidMapText);
+        },
+        (err) => {
+            setPasteText(invalidMapText);
+        }
+    );
+}
+
+function saveSelectedLevel(levelName) {
+    setCookie(COOKIE_LEVEL, levelName, cookieExpirationDays);
+}
 
 function refreshMaxBases() {
     const maxBases = getMaxBases({ x: mapSizeXText.value, y: mapSizeYText.value });
@@ -208,6 +324,8 @@ gameSeedText.addEventListener('change', () => {
     setCookie(COOKIE_SEEDUSER, gameSeedText.value, cookieExpirationDays);
 });
 
+pasteMapButton.addEventListener('click', pasteMap);
+
 lastSeedButton.addEventListener('click', () => {
     const lastSeed = getCookie(COOKIE_SEEDLAST);
     if (lastSeed) {
@@ -228,6 +346,11 @@ joinGameButton.addEventListener('click', () => {
     joinGame(document.getElementById('joinCodeInput').value);
 });
 
+mapEditorButton.addEventListener('click', () => {
+    switchStage('hostStage', 'gameStage');
+    startMapEditor(getGameOptions());
+});
+
 singlePlayerButton.addEventListener('click', () => {
     switchStage('hostStage', 'gameStage');
     startSinglePlayerGame();
@@ -241,26 +364,8 @@ playAgainButton.addEventListener('click', () => {
     }
 });
 
-challenge_levels.forEach((level, index) => {
-    const levelOption = document.createElement('option');
-    levelOption.value = index;
-    levelOption.textContent = level.name;
-    levelsDropdown.appendChild(levelOption);
-});
-
 levelsDropdown.addEventListener('change', () => {
-    if (levelsDropdown.value < 0) return;
-    const levelIndex = levelsDropdown.value;
-    const level = challenge_levels[levelIndex];
-    aiSlider.value = level.ai_players;
-    aiSliderLabel.textContent = level.ai_players;
-    mapSizeXText.value = level.map_size.x;
-    mapSizeYText.value = level.map_size.y;
-    roadsCheckbox.checked = true; // level.roads_enabled;
-    refreshMaxBases();
-    basesSlider.value = level.bases;
-    basesSliderLabel.textContent = level.bases;
-    gameSeedText.value = level.seed;
+    setSelectedLevel(levelsDropdown.value);
 });
 
 // ----- VIEW -----
@@ -287,6 +392,7 @@ function isHost() {
 
 function getGameOptions() {
     return {
+        map_name: levelsDropdown.value == LEVELINDEX_CUSTOMMAPS ? levelsDropdown.options[levelsDropdown.selectedIndex].textContent : null,
         seed: gameSeedText.value,
         map_size: { x: mapSizeXText.value, y: mapSizeYText.value },
         num_ai_players: aiSlider.value,
@@ -490,6 +596,11 @@ function gameOver(winnerId, winnerName, winnerColor) {
         });
         endCreditsAudio.load();
     }
+}
+
+function returnToMenu() {
+    closeConnections();
+    switchStage('gameStage', 'hostStage');
 }
 
 // Display copy link button and setup click event

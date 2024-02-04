@@ -5,6 +5,10 @@
 const gameWindow = document.getElementById('gameWindow');
 const canvas = document.getElementById('gameCanvas');
 const context = canvas.getContext('2d');
+const leaveGameButton = document.getElementById('leaveGameButton');
+const restartGameButton = document.getElementById('restartGameButton');
+const saveMapButton = document.getElementById('saveMapButton');
+const copyMapButton = document.getElementById('copyMapButton');
 
 // ------ GAME TYPES ------
 const playerSlots = [
@@ -52,6 +56,11 @@ let ai_controllers = [];
 
 // ------ GAME FUNCTIONS ------
 
+const AUTOSAVE_NAME = '_autosave';
+const SAVE_CONFIG_SUFFIX = '_config';
+const SAVE_STATE_SUFFIX = '_state';
+const SAVE_MAP_PREFIX = 'map_';
+let restartSeed = null;
 let shortestPathImpl = null;
 
 // All players init
@@ -64,15 +73,6 @@ function initFromConfig(config) {
         shortestPathImpl = game_config.bases.length < 120 ? shortestPath_Dijkstra : shortestPath_AStarBases;
     }
 
-    // Init seed
-    if (config.seed < 0) {
-        random = Math.random;
-    }
-    else {
-        seededRandom = new SeededRandom(config.seed);
-        random = seededRandom.next.bind(seededRandom);
-    }
-
     // Init map size
     setGameCanvasSize(config.map_size.x, config.map_size.y);
 }
@@ -80,31 +80,89 @@ function initFromConfig(config) {
 // Host only
 function initGame(game_options) {
 
-    const seed = game_options.seed < 0 ? Math.floor(Math.random() * 1000000) : game_options.seed;
+    const isRandomMap = game_options.map_name == null;
 
-    const config = {
-        seed: seed,
-        map_size: game_options.map_size,
-        bases: [],
-        roads: [],
-        roads_only: game_options.roads_enabled,
-        ai_players: game_options.num_ai_players,
+    let config = null;
+    let loadedState = null;
+
+    if (isRandomMap) {
+        const seed = game_options.seed < 0 ? Math.floor(Math.random() * 1000000) : game_options.seed;
+        config = {
+            map_name: null,
+            seed: seed,
+            map_size: game_options.map_size,
+            bases: [],
+            roads: [],
+            roads_only: game_options.roads_enabled,
+            ai_players: game_options.num_ai_players,
+            game_speed: game_options.game_speed,
+        }
+    }
+    else {
+        config = loadMap(game_options.map_name);
+        if (!config) {
+            returnToMenu();
+            return;
+        }
+        config.ai_players = game_options.num_ai_players;
+        loadedState = loadGameState(config.map_name);
     }
 
     initFromConfig(config);
 
-    // Reset game state
+    resetRandomSeed(game_config.seed);
+
+    if (isRandomMap) {
+        generateMap(game_options.num_bases, game_config.roads_only);
+    }
+
+    restartSeed = seededRandom ? seededRandom.seed : null;
+
+    if (loadedState) {
+        game_state = loadedState;
+        basesDrawDirty = true;
+    }
+    else {
+        resetGameState();
+    }
+}
+
+function resetRandomSeed(seed) {
+    if (seed < 0) {
+        random = Math.random;
+        seededRandom = null;
+    }
+    else {
+        seededRandom = new SeededRandom(seed);
+        random = seededRandom.next.bind(seededRandom);
+    }
+}
+
+function resetGameState() {
     game_state = {
         time: 0,
-        speed: game_options.game_speed,
+        speed: game_config.game_speed,
         players: [],
         bases: [],
         units: [],
     };
     ai_controllers = [];
 
+    for (let i = 0, n = game_config.bases.length; i < n; i++) {
+        game_state.bases.push({
+            id: game_config.bases[i].id,
+            ownerid: -1,
+            units: 10,
+            autotarget: null,
+        });
+    }
+    basesDrawDirty = true;
+
+    initPlayers();
+}
+
+function generateMap(num_bases, roads_only) {
     // Init bases
-    const num_bases = game_options.num_bases;
     for (let i = 0; i < num_bases; i++) {
         const newBase = {
             id: game_config.bases.length,
@@ -112,12 +170,11 @@ function initGame(game_options) {
             unittype: UNIT_SOLDIER,
             location: getRandomLocation(baseRadius + baseMinDist, game_config.bases)
         };
-        addBase(newBase, -1, 10);
+        addBase(newBase);
     }
-    basesDrawDirty = true;
 
     // Init roads
-    if (game_config.roads_only) {
+    if (roads_only) {
         game_config.bases.forEach((base) => {
             const num_roads = Math.floor(random() * 3) + 1;
             for (let i = 0; i < num_roads; i++) {
@@ -134,8 +191,11 @@ function initGame(game_options) {
             }
         });
     }
+}
 
-    // Init players
+function initPlayers() {
+    if (editingMap) return;
+
     addPlayer('Host');
 
     connectedPlayers.forEach((player) => {
@@ -149,36 +209,45 @@ function initGame(game_options) {
     }
 }
 
-function saveGame() {
-    localStorage.setItem('game_config', JSON.stringify(game_config));
-    localStorage.setItem('game_state', JSON.stringify(game_state));
+function saveGameState(saveName) {
+    localStorage.setItem(saveName + SAVE_STATE_SUFFIX, JSON.stringify(game_state));
 }
 
-function saveGameState() {
-    localStorage.setItem('game_state', JSON.stringify(game_state));
+function loadGameState(saveName) {
+    const savedStateStr = localStorage.getItem(saveName + SAVE_STATE_SUFFIX);
+    if (savedStateStr == null) return;
+    return JSON.parse(savedStateStr);
 }
 
-function loadGame() {
-    const savedConfigStr = localStorage.getItem('game_config');
-    if (savedConfigStr == null) return;
-    const savedConfig = JSON.parse(savedConfigStr);
-    const configMatches = game_config.seed == savedConfig.seed &&
+function saveGame(saveName, gameConfig, gameState) {
+    localStorage.setItem(saveName + SAVE_CONFIG_SUFFIX, JSON.stringify(gameConfig));
+    localStorage.setItem(saveName + SAVE_STATE_SUFFIX, JSON.stringify(gameState));
+}
+
+function loadGame(saveName) {
+    const savedConfig = loadMap(saveName);
+    if (!savedConfig) return false;
+    const configMatches = (savedConfig.map_name && game_config.map_name == savedConfig.map_name) ||
+        (game_config.seed == savedConfig.seed &&
         game_config.map_size.x == savedConfig.map_size.x &&
         game_config.map_size.y == savedConfig.map_size.y &&
         game_config.roads_only == savedConfig.roads_only &&
         game_config.bases.length == savedConfig.bases.length &&
-        game_config.ai_players == savedConfig.ai_players;
+        game_config.ai_players == savedConfig.ai_players);
 
     if (configMatches) {
-        game_state = JSON.parse(localStorage.getItem('game_state'));
-        return true;
+        const loadedState = loadGameState(saveName);
+        if (loadedState) {
+            game_state = loadedState;
+            return true;
+        }
     }
     return false;
 }
 
-function clearSaveGame() {
-    localStorage.removeItem('game_config');
-    localStorage.removeItem('game_state');
+function clearSaveGame(saveName) {
+    localStorage.removeItem(saveName + SAVE_CONFIG_SUFFIX);
+    localStorage.removeItem(saveName + SAVE_STATE_SUFFIX);
 }
 
 function handlePlayerWin(winnerid) {
@@ -187,7 +256,7 @@ function handlePlayerWin(winnerid) {
     console.log('Player ' + winnerid + ' wins!');
     gameOver(winnerid, winning_player.name, winning_player.color);
 
-    clearSaveGame();
+    clearSaveGame(AUTOSAVE_NAME);
 
     addGifStateFrame(1000);
 }
@@ -202,7 +271,7 @@ function addPlayer(name) {
     let player = playerSlots[playerIndex];
     player.name = name;
     game_state.players.push(player);
-    unowned_bases = game_config.bases.filter((base) => {
+    const unowned_bases = game_config.bases.filter((base) => {
         return getBaseOwner(base.id) < 0;
     });
     assignStartBase(getRandomElement(unowned_bases), player.id);
@@ -218,15 +287,9 @@ function addAIPlayer(name) {
     });
 }
 
-function addBase(base, ownerid, units) {
+function addBase(base) {
     game_config.bases.push(base);
     game_config.roads.push([]);
-    game_state.bases.push({
-        id: base.id,
-        ownerid: ownerid,
-        units: units,
-        autotarget: null,
-    });
 }
 
 function addRoad(startBase, endBase) {
@@ -502,12 +565,13 @@ function setGameCanvasSize(width, height) {
 }
 
 function refreshCanvasStyleSize() {
+    const windowHeightFactor = 0.9;
     const aspectRatio = canvas.width / canvas.height;
-    const windowRatio = window.innerWidth / window.innerHeight;
+    const windowRatio = window.innerWidth / (window.innerHeight * windowHeightFactor);
     // If window ratio is greater, height is the limiting factor
     if (windowRatio > aspectRatio) {
         canvas.style.width = 'auto';
-        canvas.style.height = '100%';
+        canvas.style.height = windowHeightFactor * 100 + '%';
     } else {
         // Width is the limiting factor
         canvas.style.width = '100%';
@@ -554,6 +618,13 @@ gameWindow.addEventListener('mousedown', handleMouseDown);
 gameWindow.addEventListener('mousemove', handleMouseMove);
 gameWindow.addEventListener('mouseup', handleMouseUp);
 
+leaveGameButton.addEventListener('click', leaveGame);
+restartGameButton.addEventListener('click', restartGame);
+saveMapButton.addEventListener('click', saveEditedMap);
+copyMapButton.addEventListener('click', copyMapToClipboard);
+
+let editingMap = false;
+
 let isDragging = false;
 let dragStartBase = null;
 let dragLocation = null;
@@ -571,7 +642,7 @@ let doubleClick = false;
 let isMultitouching = false;
 
 function canDragBase(base) {
-    return getBaseOwner(base.id) === controlledPlayerId;
+    return editingMap || getBaseOwner(base.id) === controlledPlayerId;
 }
 function getMouseLocation(event) {
     const inputX = event.clientX || event.touches[0].clientX;
@@ -597,7 +668,7 @@ function getZoomFactor() {
     return window.outerWidth / window.innerWidth;
 }
 
-function selectBase(location, canSelect = () => true) {
+function selectBase(location, canSelect = (base) => true) {
     let minDistance = Infinity;
     const selectZoomFactor = getZoomFactor() * getCanvasScaleFactor();
     return game_config.bases.reduce((prev, curr) => {
@@ -686,6 +757,10 @@ function resetDragging() {
     selectedBases = [];
 }
 
+function isLocationInsideCanvas(location, margin = 0) {
+    return location.x > margin && location.x < (canvas.width - margin) && location.y > margin && location.y < (canvas.height - margin);
+}
+
 function input_clickLocation(location) {
     doubleClick = (lastFrameTime - lastClickTime) < doubleClickMs;
     lastClickTime = lastFrameTime;
@@ -696,6 +771,23 @@ function input_clickLocation(location) {
         dragStartBase = selectedBase;
         isDragging = true;
         selectedBases.push(dragStartBase.id);
+    }
+    else if (editingMap) {
+        if (!isLocationInsideCanvas(location, baseMinDist + 5)) return;
+        const newBase = {
+            id: game_config.bases.length,
+            trainingRate: .2 + random(),
+            unittype: UNIT_SOLDIER,
+            location: location
+        };
+        addBase(newBase);
+        game_state.bases.push({
+            id: newBase.id,
+            ownerid: -1,
+            units: 10,
+            autotarget: null,
+        });
+        basesDrawDirty = true;
     }
 }
 
@@ -708,7 +800,7 @@ function input_hoverLocation(location) {
 
     const newHoveredBase = selectBase(location);
     if (!hoveredBase || !newHoveredBase || newHoveredBase.id != hoveredBase.id) {
-        hoveredBase = newHoveredBase && getBaseOwner(newHoveredBase.id) == controlledPlayerId ? newHoveredBase : null;
+        hoveredBase = newHoveredBase && canDragBase(newHoveredBase) ? newHoveredBase : null;
         hoveredTime = 0;
     }
 }
@@ -722,13 +814,24 @@ function input_releaseLocation(location) {
 
     dragEndBase = selectBase(location);
     if (dragStartBase && dragEndBase) {
-        selectedBases.forEach((id) => {
-            if (getBaseOwner(id) != getBaseOwner(dragStartBase.id)) return;
-            if (id == dragEndBase.id) return;
-            const baseState = game_state.bases[id];
-            const unitCount = Math.floor(baseState.units);
-            input_sendUnits(controlledPlayerId, id, dragEndBase.id, unitCount, doubleClick);
-        });
+        if (editingMap) {
+            selectedBases.forEach((id) => {
+                if (game_config.roads[id].indexOf(dragEndBase.id) < 0) {
+                    game_config.roads[id].push(dragEndBase.id);
+                    game_config.roads[dragEndBase.id].push(id);
+                }
+            });
+            basesDrawDirty = true;
+        }
+        else {
+            selectedBases.forEach((id) => {
+                if (getBaseOwner(id) != getBaseOwner(dragStartBase.id)) return;
+                if (id == dragEndBase.id) return;
+                const baseState = game_state.bases[id];
+                const unitCount = Math.floor(baseState.units);
+                input_sendUnits(controlledPlayerId, id, dragEndBase.id, unitCount, doubleClick);
+            });
+        }
     }
 
     isDragging = false;
@@ -1128,13 +1231,7 @@ function updateState(deltaTime) {
         selectedBases = newSelectedBases;
     }
 
-    if (hoveredBase) {
-        hoveredTime += deltaTime;
-        if (hoveredTime >= selectHoverTime && selectedBases.indexOf(hoveredBase.id) < 0) {
-            selectedBases.push(hoveredBase.id);
-            hoveredBase = null;
-        }
-    }
+    updateInput(deltaTime);
 
     game_state.bases.forEach((baseState) => {
         if (baseState.ownerid < 0 && baseState.units >= 10) return;
@@ -1201,6 +1298,25 @@ function updateState(deltaTime) {
     }
 }
 
+function updateInput(deltaTime) {
+    if (hoveredBase) {
+        hoveredTime += deltaTime;
+        if (hoveredTime >= selectHoverTime && selectedBases.indexOf(hoveredBase.id) < 0) {
+            if (editingMap) {
+                selectedBases.forEach((id) => {
+                    if (game_config.roads[id].indexOf(hoveredBase.id) < 0) {
+                        game_config.roads[id].push(hoveredBase.id);
+                        game_config.roads[hoveredBase.id].push(id);
+                    }
+                });
+                basesDrawDirty = true;
+            }
+            selectedBases.push(hoveredBase.id);
+            hoveredBase = null;
+        }
+    }
+}
+
 // ------ RENDERING ------
 const backgroundCanvas = document.createElement('canvas');
 const backgroundContext = backgroundCanvas.getContext('2d');
@@ -1214,7 +1330,13 @@ let downloadGifListener = null;
 
 // Draw the background on the offscreen canvas
 function drawBackground() {
-    //todo
+    if (editingMap) {
+        backgroundContext.fillStyle = 'black';
+        backgroundContext.fillRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
+    }
+    else {
+        backgroundContext.clearRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
+    }
 }
 
 function drawBases_Game(bases, basesState, drawContext, scale = 1) {
@@ -1474,7 +1596,7 @@ function update(timestamp) {
         updateState(deltaTime * game_state.speed);
         draw();
         if (autoSaveCheckbox.checked) {
-            saveGameState();
+            saveGameState(AUTOSAVE_NAME);
         }
     }
 
@@ -1496,17 +1618,24 @@ function isGameStarted() {
 function startGame(game_options) {
     if (isGameStarted()) return;
 
+    editingMap = false;
+
+    saveMapButton.style.display = "none";
+    copyMapButton.style.display = "none";
+
     checkForGestureNav();
     setTouchInputsLockedToGame(true);
 
     if (isHost()) {
+        restartGameButton.style.display = "inline";
         controlledPlayerId = 0;
         initGame(game_options);
-        if (!autoSaveCheckbox.checked || !loadGame()) {
-            saveGame();
+        if (!autoSaveCheckbox.checked || !loadGame(AUTOSAVE_NAME)) {
+            saveGame(AUTOSAVE_NAME, game_config, game_state);
         }
     }
     else { // init client
+        restartGameButton.style.display = "none";
         if (cameraCheckbox.checked) {
             startCamera(controlledPlayerId);
         }
@@ -1533,9 +1662,142 @@ function startGame(game_options) {
     requestAnimationFrame(update);
 }
 
+function restartGame() {
+    if (isGameStarted()) {
+        if (restartSeed != null) {
+            resetRandomSeed(restartSeed);
+        }
+        resetGameState();
+    }
+}
+
 function stopGame() {
     lastFrameTime = null;
     setTouchInputsLockedToGame(false);
+}
+
+function leaveGame() {
+    if (isGameStarted()) {
+        stopGame();
+        returnToMenu();
+    }
+}
+
+// ------ MAP EDITOR ------
+
+function update_MapEditor(timestamp) {
+    if (lastFrameTime == null) return;
+    const deltaTime = (timestamp - lastFrameTime) / 1000;
+
+    if (deltaTime >= frame_time) {
+        lastFrameTime = timestamp;
+        updateInput(deltaTime);
+        draw();
+    }
+
+    requestAnimationFrame(update_MapEditor);
+}
+
+function startMapEditor(game_options) {
+    if (isGameStarted()) return;
+
+    editingMap = true;
+
+    checkForGestureNav();
+    setTouchInputsLockedToGame(true);
+
+    saveMapButton.style.display = "inline";
+    copyMapButton.style.display = "inline";
+    restartGameButton.style.display = "none";
+
+    const editorGameOptions = {
+        map_name: game_options.map_name,
+        seed: game_options.seed,
+        num_ai_players: game_options.num_ai_players,
+        num_bases: 0,
+        roads_enabled: true,
+        map_size: game_options.map_size,
+        game_speed: 1,
+    };
+    initGame(editorGameOptions);
+
+    drawBackground();
+    drawMap(game_state.bases, basesCanvas, basesContext);
+
+    lastFrameTime = performance.now();
+    requestAnimationFrame(update_MapEditor);
+}
+
+function isValidMapName(mapName) {
+    return mapName && mapName.length > 0 && mapName.length <= 50;
+}
+
+function saveEditedMap() {
+    if (!editingMap || !isGameStarted()) return;
+
+    saveMap(game_config);
+    setSelectedLevelName(game_config.map_name);
+
+    leaveGame();
+}
+
+function saveMap(mapConfig) {
+    let mapName = mapConfig.map_name;
+    if (!isValidMapName(mapName)) {
+        mapName = prompt("Enter a name for the map:").trim();
+    }
+    if (!isValidMapName(mapName)) {
+        return false;
+    }
+    mapConfig.map_name = mapName;
+
+    const mapSaveName = SAVE_MAP_PREFIX + mapName;
+    const mapConfigName = mapSaveName + SAVE_CONFIG_SUFFIX;
+    const mapExists = localStorage.getItem(mapConfigName) != null;
+    if (mapExists) {
+        if (!confirm("Overwrite existing map?")) {
+            return false;
+        }
+    }
+
+    localStorage.setItem(mapConfigName, JSON.stringify(mapConfig));
+    localStorage.setItem(mapSaveName + SAVE_STATE_SUFFIX, null);
+
+    if (!mapExists) {
+        const mapListStr = localStorage.getItem('mapList');
+        const mapList = mapListStr ? JSON.parse(mapListStr) : [];
+        mapList.push(mapName);
+        localStorage.setItem('mapList', JSON.stringify(mapList));
+        addCustomMapToList(mapName);
+    }
+
+    return true;
+}
+
+function loadMap(mapName) {
+    const mapSaveName = SAVE_MAP_PREFIX + mapName;
+    const mapConfigStr = localStorage.getItem(mapSaveName + SAVE_CONFIG_SUFFIX);
+    if (!mapConfigStr) return null;
+    const mapConfig = JSON.parse(mapConfigStr);
+    return mapConfig;
+}
+
+function copyMapToClipboard() {
+    if (!isGameStarted()) return;
+
+    function setCopyText(text) {
+        copyMapButton.textContent = text;
+        setTimeout(() => {
+            copyMapButton.textContent = "Copy Map";
+        }, 1000);
+    }
+
+    const mapConfig = JSON.stringify(game_config);
+    navigator.clipboard.writeText(mapConfig).then(() => {
+        setCopyText("Copied!");
+    }, (err) => {
+        setCopyText("Error!");
+    });
 }
 
 // ------ LEVELS -------
