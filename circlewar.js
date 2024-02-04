@@ -489,7 +489,7 @@ function handleWindowResize() {
 window.addEventListener('resize', handleWindowResize);
 
 const preventSwipeGesture = function(event) {
-    const touchX = event.touches[0].location;
+    const touchX = event.touches[0].touchX;
     if (touchX < 50 || touchX > window.innerWidth - 50) {
         event.preventDefault();
     }
