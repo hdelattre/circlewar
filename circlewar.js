@@ -1426,17 +1426,16 @@ let lastFrameTime = null;
 const stateUpdateInterval = 5;
 let nextStateUpdate = stateUpdateInterval;
 
-function update() {
+function update(timestamp) {
     if (lastFrameTime == null) return;
-    const currentTime = performance.now();
-    const deltaTime = (currentTime - lastFrameTime) / 1000 * game_state.speed;
+    const deltaTime = (timestamp - lastFrameTime) / 1000 * game_state.speed;
 
     if (deltaTime > 1) {
-        // Skip the frame if the delta time is too large
-        lastFrameTime = currentTime;
+        // Skip simulating the frame if the delta time is too large
+        lastFrameTime = timestamp;
     }
     else if (deltaTime >= frame_time) {
-        lastFrameTime = currentTime;
+        lastFrameTime = timestamp;
         updateState(deltaTime);
         draw();
     }
@@ -1449,7 +1448,6 @@ function update() {
         }
     }
 
-    // Call the update function again
     requestAnimationFrame(update);
 }
 
@@ -1492,7 +1490,7 @@ function startGame(game_options) {
 
     // Start the game loop
     lastFrameTime = performance.now();
-    update();
+    requestAnimationFrame(update);
 }
 
 function stopGame() {
