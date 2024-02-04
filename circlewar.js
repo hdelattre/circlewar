@@ -525,6 +525,7 @@ let dragLocation = null;
 let dragEndBase = null;
 let hoveredBase = null;
 let hoveredTime = 0;
+let lastTouchDistance = 0;
 const selectMargin = 35;
 const selectHoverTime = 0.3;
 let selectedBases = [];
@@ -553,13 +554,17 @@ function getBaseSelectRadius(base) {
     return selectRadius;
 }
 
-function getZoomFactor() {
+function getCanvasScaleFactor() {
     return canvas.width / canvas.clientWidth;
+}
+
+function getZoomFactor() {
+    return window.outerWidth / window.innerWidth;
 }
 
 function selectBase(location, canSelect = () => true) {
     let minDistance = Infinity;
-    const zoomFactor = getZoomFactor();
+    const zoomFactor = getCanvasScaleFactor() * getZoomFactor();
     return game_config.bases.reduce((prev, curr) => {
         if (!canSelect(curr)) return prev;
         const distance = getDistance(location, curr.location);
@@ -595,10 +600,13 @@ function handleTouchStart(event) {
     if (event.touches.length == 1) {
         handleMouseDown(event);
     }
-    else {
+    else if (event.touches.length == 2) {
         isMultitouching = true;
         isDragging = false;
         setTouchInputsLockedToGame(false);
+        const touch1Location = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+        const touch2Location = { x: event.touches[1].clientX, y: event.touches[1].clientY };
+        lastTouchDistance = getDistance(touch1Location, touch2Location);
     }
 }
 
@@ -606,6 +614,18 @@ function handleTouchMove(event) {
     if (!isGameStarted()) return;
     if (event.touches.length == 1) {
         handleMouseMove(event);
+    }
+    else if (event.touches.length == 2) {
+        const touch1Location = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+        const touch2Location = { x: event.touches[1].clientX, y: event.touches[1].clientY };
+        const newTouchDistance = getDistance(touch1Location, touch2Location);
+        if (getZoomFactor() <= 1 && newTouchDistance < lastTouchDistance) {
+            event.preventDefault();
+        }
+        lastTouchDistance = newTouchDistance;
+    }
+    else {
+        event.preventDefault();
     }
 }
 
