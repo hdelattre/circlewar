@@ -115,7 +115,8 @@ function loadSettingsFromCookies() {
         cameraCheckbox.checked = cameraCheckboxValue == 'true';
     }
 
-    if (gameActiveValue) {
+    // Game active cookie disable for now
+    if (false && gameActiveValue) {
         if (gameActiveValue == COOKIE_GAMEACTIVE_SINGLEPLAYER) {
             const lastSeed = getCookie(COOKIE_SEEDLAST);
             if (lastSeed) {
