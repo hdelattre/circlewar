@@ -60,6 +60,8 @@ const COOKIE_MAPSIZEX = 'mapSizeX';
 const COOKIE_MAPSIZEY = 'mapSizeY';
 const COOKIE_SEEDUSER = 'userSeed';
 const COOKIE_SEEDLAST = 'lastSeed';
+const COOKIE_GAMEACTIVE = 'gameActive';
+const COOKIE_GAMEACTIVE_SINGLEPLAYER = 1;
 
 function loadSettingsFromCookies() {
     const aiSliderValue = getCookie(COOKIE_AI);
@@ -71,6 +73,7 @@ function loadSettingsFromCookies() {
     const mapSizeXValue = getCookie(COOKIE_MAPSIZEX);
     const mapSizeYValue = getCookie(COOKIE_MAPSIZEY);
     const userSeedValue = getCookie(COOKIE_SEEDUSER);
+    const gameActiveValue = getCookie(COOKIE_GAMEACTIVE);
 
     if (aiSliderValue) {
         aiSlider.value = aiSliderValue;
@@ -110,6 +113,20 @@ function loadSettingsFromCookies() {
 
     if (cameraCheckboxValue) {
         cameraCheckbox.checked = cameraCheckboxValue == 'true';
+    }
+
+    if (gameActiveValue) {
+        if (gameActiveValue == COOKIE_GAMEACTIVE_SINGLEPLAYER) {
+            const lastSeed = getCookie(COOKIE_SEEDLAST);
+            if (lastSeed) {
+                gameSeedText.value = lastSeed;
+            }
+            switchStage('hostStage', 'gameStage');
+            startSinglePlayerGame();
+        }
+        else {
+            joinGame(gameActiveValue);
+        }
     }
 }
 
@@ -203,7 +220,6 @@ joinGameButton.addEventListener('click', () => {
 
 singlePlayerButton.addEventListener('click', () => {
     switchStage('hostStage', 'gameStage');
-
     startSinglePlayerGame();
 });
 
@@ -301,6 +317,7 @@ function initRandomSeed(game_options) {
 function startSinglePlayerGame() {
     localPlayerId = 0;
     hosted_game_options = getGameOptions();
+    setCookie(COOKIE_GAMEACTIVE, COOKIE_GAMEACTIVE_SINGLEPLAYER, 0.1);
     initRandomSeed(hosted_game_options);
     startGame(hosted_game_options);
 }
@@ -368,6 +385,8 @@ function hostGame() {
         }
     });
 
+    setCookie(COOKIE_GAMEACTIVE, null, 0.1);
+
     switchStage('hostStage', 'pendingStage');
 }
 
@@ -378,6 +397,8 @@ function joinGame(peerId) {
         hostConnection = peer.connect(peerId);
         setupConnection(hostConnection, false);
     });
+
+    setCookie(COOKIE_GAMEACTIVE, peerId, 0.1);
 
     switchStage('hostStage', 'pendingStage');
 }
@@ -438,6 +459,8 @@ function startCamera(controlledPlayerId) {
 function gameOver(winnerId, winnerName, winnerColor) {
 
     closeConnections();
+
+    setCookie(COOKIE_GAMEACTIVE, null, 0.1);
 
     const gameOverText = document.getElementById('gameOverText');
     const capitalizedColor = winnerColor.charAt(0).toUpperCase() + winnerColor.slice(1);
