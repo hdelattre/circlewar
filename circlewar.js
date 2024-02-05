@@ -1784,7 +1784,7 @@ function saveMap(mapConfig) {
     const mapConfigName = mapSaveName + SAVE_CONFIG_SUFFIX;
     const mapExists = localStorage.getItem(mapConfigName) != null;
     if (mapExists) {
-        if (!confirm("Overwrite existing map?")) {
+        if (!confirm("Overwrite existing map '" + mapName + "'?")) {
             return false;
         }
     }
