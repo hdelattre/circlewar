@@ -297,6 +297,31 @@ function addBase(base) {
     game_config.roads.push([]);
 }
 
+function deleteBase(baseid) {
+    const baseRoads = game_config.roads[baseid];
+    for (let i = 0, n = baseRoads.length; i < n; i++) {
+        const neighborRoads = game_config.roads[baseRoads[i]];
+        const neighborRoadIndex = neighborRoads.indexOf(baseid);
+        neighborRoads.splice(neighborRoadIndex, 1);
+    }
+    game_config.bases.splice(baseid, 1);
+    game_config.roads.splice(baseid, 1);
+    game_state.bases.splice(baseid, 1);
+    for (let i = baseid, n = game_config.bases.length; i < n; i++) {
+        game_config.bases[i].id = i;
+        game_state.bases[i].id = i;
+    }
+    for (let i = 0, n = game_config.roads.length; i < n; i++) {
+        const baseRoads = game_config.roads[i];
+        for (let j = 0, m = baseRoads.length; j < m; j++) {
+            if (baseRoads[j] > baseid) {
+                baseRoads[j] -= 1;
+            }
+        }
+    }
+    basesDrawDirty = true;
+}
+
 function addRoad(startBaseId, endBaseId) {
     if (startBaseId == endBaseId) return;
     game_config.roads[startBaseId].push(endBaseId);
@@ -849,16 +874,21 @@ function input_releaseLocation(location) {
     dragEndBase = selectBase(location);
     if (dragStartBase && dragEndBase) {
         if (editingMap) {
-            if (dragStartBase == dragEndBase && (lastFrameTime - lastClickTime) >= 1) {
-                const ownerid = getBaseOwner(dragStartBase.id);
-                if (ownerid >= 0) {
-                    editBaseOwner += 1;
-                    if (editBaseOwner >= playerSlots.length) editBaseOwner = -1;
+            if (dragStartBase == dragEndBase) {
+                if (doubleClick) {
+                    deleteBase(dragStartBase.id);
                 }
-                else if (editBaseOwner < 0) {
-                    editBaseOwner = 0;
+                else if ((lastFrameTime - lastClickTime) >= 300) {
+                    const ownerid = getBaseOwner(dragStartBase.id);
+                    if (ownerid >= 0) {
+                        editBaseOwner += 1;
+                        if (editBaseOwner >= playerSlots.length) editBaseOwner = -1;
+                    }
+                    else if (editBaseOwner < 0) {
+                        editBaseOwner = 0;
+                    }
+                    game_state.bases[dragStartBase.id].ownerid = editBaseOwner;
                 }
-                game_state.bases[dragStartBase.id].ownerid = editBaseOwner;
             }
             else {
                 selectedBases.forEach((id) => {
