@@ -91,7 +91,7 @@ function initGame(game_options) {
     if (!isRandomMap) {
         config = loadMap(game_options.map_name);
         config.ai_players = game_options.num_ai_players;
-        loadedState = loadGameState(config.map_name);
+        loadedState = loadGameState(SAVE_MAP_PREFIX + config.map_name);
     }
     if (config == null) {
         const seed = game_options.seed < 0 ? Math.floor(Math.random() * 1000000) : game_options.seed;
@@ -120,6 +120,7 @@ function initGame(game_options) {
     if (loadedState) {
         game_state = loadedState;
         basesDrawDirty = true;
+        initPlayers();
     }
     else {
         resetGameState();
@@ -147,7 +148,7 @@ function resetGameState() {
     };
     ai_controllers = [];
 
-    for (let i = 0, n = game_config.bases.length; i < n; i++) {
+    for (let i = game_state.bases.length, n = game_config.bases.length; i < n; i++) {
         game_state.bases.push({
             id: game_config.bases[i].id,
             ownerid: -1,
@@ -273,7 +274,11 @@ function addPlayer(name) {
     const unowned_bases = game_config.bases.filter((base) => {
         return getBaseOwner(base.id) < 0;
     });
-    assignStartBase(getRandomElement(unowned_bases), player.id);
+    const owned_base = game_config.bases.find((base) => { return getBaseOwner(base.id) == playerIndex });
+    if (owned_base == null) {
+        assignStartBase(getRandomElement(unowned_bases), player.id);
+    }
+
     return playerIndex;
 }
 
@@ -526,7 +531,7 @@ function updateUnits(units, deltaTime, allow_capture = true) {
 }
 
 function getPlayerColor(playerId) {
-    return playerId >= 0 ? game_state.players[playerId].color : 'gray';
+    return playerId >= 0 ? playerSlots[playerId].color : 'gray';
 }
 
 // ------ INPUT HANDLING ------
@@ -627,6 +632,7 @@ saveAsMapButton.addEventListener('click', saveAsEditedMap);
 copyMapButton.addEventListener('click', copyMapToClipboard);
 
 let editingMap = false;
+let editBaseOwner = -1;
 
 let isDragging = false;
 let dragStartBase = null;
@@ -837,12 +843,25 @@ function input_releaseLocation(location) {
     dragEndBase = selectBase(location);
     if (dragStartBase && dragEndBase) {
         if (editingMap) {
-            selectedBases.forEach((id) => {
-                if (game_config.roads[id].indexOf(dragEndBase.id) < 0) {
-                    game_config.roads[id].push(dragEndBase.id);
-                    game_config.roads[dragEndBase.id].push(id);
+            if (dragStartBase == dragEndBase && (lastFrameTime - lastClickTime) >= 1) {
+                const ownerid = getBaseOwner(dragStartBase.id);
+                if (ownerid >= 0) {
+                    editBaseOwner += 1;
+                    if (editBaseOwner >= playerSlots.length) editBaseOwner = -1;
                 }
-            });
+                else if (editBaseOwner < 0) {
+                    editBaseOwner = 0;
+                }
+                game_state.bases[dragStartBase.id].ownerid = editBaseOwner;
+            }
+            else {
+                selectedBases.forEach((id) => {
+                    if (game_config.roads[id].indexOf(dragEndBase.id) < 0) {
+                        game_config.roads[id].push(dragEndBase.id);
+                        game_config.roads[dragEndBase.id].push(id);
+                    }
+                });
+            }
             basesDrawDirty = true;
         }
         else {
@@ -1645,7 +1664,7 @@ function update(timestamp) {
         updateState(deltaTime * game_state.speed);
         drawBaseStateFunc = editingMap ? drawBaseState_Editor : drawBaseState;
         draw(drawBaseStateFunc);
-        if (autoSaveCheckbox.checked) {
+        if (autoSaveCheckbox.checked && !editingMap) {
             saveGameState(AUTOSAVE_NAME);
         }
     }
@@ -1752,6 +1771,7 @@ function startMapEditor(game_options) {
     if (isGameStarted()) return;
 
     editingMap = true;
+    editBaseOwner = -1;
 
     checkForGestureNav();
     setTouchInputsLockedToGame(true);
@@ -1824,7 +1844,7 @@ function saveMap(mapConfig) {
     }
 
     localStorage.setItem(mapConfigName, JSON.stringify(mapConfig));
-    localStorage.setItem(mapSaveName + SAVE_STATE_SUFFIX, null);
+    saveGameState(mapSaveName);
 
     if (!mapExists) {
         const mapListStr = localStorage.getItem('mapList');
