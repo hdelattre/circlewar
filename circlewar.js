@@ -680,7 +680,7 @@ function getZoomFactor() {
 
 function selectBase(location, canSelect = (base) => true) {
     let minDistance = Infinity;
-    const selectZoomFactor = getZoomFactor() * getCanvasScaleFactor();
+    const selectZoomFactor = editingMap ? 1 : getZoomFactor() * getCanvasScaleFactor();
     return game_config.bases.reduce((prev, curr) => {
         if (!canSelect(curr)) return prev;
         const distance = getDistance(location, curr.location);
