@@ -291,7 +291,12 @@ function refreshMaxBases() {
 }
 
 mapSizeXText.addEventListener('change', () => {
-    const value = mapSizeXText.value;
+    let value = Number(mapSizeXText.value);
+    if (isNaN(value)) {
+        value = minMapSize.x;
+        mapSizeXText.value = value;
+    }
+
     if (value < minMapSize.x) {
         mapSizeXText.value = minMapSize.x;
     }
@@ -302,7 +307,11 @@ mapSizeXText.addEventListener('change', () => {
     refreshMaxBases();
 });
 mapSizeYText.addEventListener('change', () => {
-    const value = mapSizeYText.value;
+    let value = Number(mapSizeYText.value);
+    if (isNaN(value)) {
+        value = minMapSize.x;
+        mapSizeYText.value = value;
+    }
     if (value < minMapSize.y) {
         mapSizeYText.value = minMapSize.y;
     }
@@ -314,12 +323,12 @@ mapSizeYText.addEventListener('change', () => {
 });
 
 gameSeedText.addEventListener('change', () => {
-    const value = gameSeedText.value;
-    if (value > MAX_SEED) {
-        gameSeedText.value = MAX_SEED;
-    }
-    else if (value < -1) {
+    const value = Number(gameSeedText.value);
+    if (isNaN(value) || value < -1) {
         gameSeedText.value = -1;
+    }
+    else if (value > MAX_SEED) {
+        gameSeedText.value = MAX_SEED;
     }
     setCookie(COOKIE_SEEDUSER, gameSeedText.value, cookieExpirationDays);
 });
@@ -393,12 +402,12 @@ function isHost() {
 function getGameOptions() {
     return {
         map_name: levelsDropdown.value == LEVELINDEX_CUSTOMMAPS ? levelsDropdown.options[levelsDropdown.selectedIndex].textContent : null,
-        seed: gameSeedText.value,
-        map_size: { x: mapSizeXText.value, y: mapSizeYText.value },
-        num_ai_players: aiSlider.value,
-        num_bases: basesSlider.value,
+        seed: Number(gameSeedText.value),
+        map_size: { x: Number(mapSizeXText.value), y: Number(mapSizeYText.value) },
+        num_ai_players: Number(aiSlider.value),
+        num_bases: Number(basesSlider.value),
         roads_enabled: roadsCheckbox.checked,
-        game_speed: gameSpeedSlider.value,
+        game_speed: Number(gameSpeedSlider.value),
     };
 }
 
