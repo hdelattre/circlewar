@@ -1425,7 +1425,80 @@ function drawMap(basesState, drawCanvas, drawContext, scale = 1, drawBasesImpl =
     drawBasesImpl(game_config.bases, basesState, drawContext, scale);
 }
 
-function draw() {
+function drawBaseState(base) {
+    const { x, y } = base.location; // Get the x and y coordinates from the base's location
+    const baseState = game_state.bases[base.id];
+    const ownerid = baseState.ownerid;
+    const radius = baseRadius;
+
+    // Draw the player's stream image
+    const playerStream = playerStreams[ownerid];
+    if (playerStream) {
+        const videoRadius = radius - 2; // Leave a small color border around the video
+        const videoTrack = playerStream.stream.getVideoTracks()[0];
+        const videoSettings = videoTrack.getSettings();
+        const videoWidth = videoSettings.width;
+        const videoHeight = videoSettings.height;
+        const videoZoom = 4; // Adjust the zoom level here
+        const videoScale = Math.min(videoRadius * 2 / videoWidth, videoRadius * 2 / videoHeight) * videoZoom;
+        const videoScaledWidth = videoWidth * videoScale;
+        const videoScaledHeight = videoHeight * videoScale;
+        const videoScaledX = x - videoScaledWidth / 2;
+        const videoScaledY = y - videoScaledHeight / 2;
+
+        context.save();
+        context.beginPath();
+        context.arc(x, y, videoRadius, 0, 2 * Math.PI);
+        context.clip();
+        context.drawImage(playerStream.element, videoScaledX, videoScaledY, videoScaledWidth, videoScaledHeight);
+        context.restore();
+
+        // Draw the training rate above circle to not overlap video
+        context.font = '15px Arial';
+        context.fillStyle = 'black';
+        context.textAlign = 'center';
+        context.fillText('+' + base.trainingRate.toFixed(1), x - 3, y - 24);
+    }
+    else {
+        // Draw the training rate inside circle
+        context.font = '15px Arial';
+        context.fillStyle = 'white';
+        context.textAlign = 'center';
+        context.fillText('+' + base.trainingRate.toFixed(1), x - 3, y + 5);
+    }
+
+    // Draw the number of units
+    context.font = '20px Arial';
+    context.fillStyle = 'black';
+    context.textAlign = 'center';
+    context.fillText(parseInt(baseState.units), x, y + radius + 20);
+}
+
+function drawBaseState_Editor(base) {
+    const { x, y } = base.location; // Get the x and y coordinates from the base's location
+    const baseState = game_state.bases[base.id];
+    const ownerid = baseState.ownerid;
+    const radius = baseRadius;
+
+    context.font = '15px Arial';
+    context.fillStyle = 'white';
+    context.textAlign = 'center';
+    context.fillText('+' + base.trainingRate.toFixed(1), x - 3, y + 5);
+}
+
+function drawUnit(unit) {
+    const { x, y } = unit.location;
+    const owner = game_state.players[unit.ownerid];
+    const radius = 10;
+
+    // Draw the unit circle
+    context.beginPath();
+    context.arc(x, y, radius, 0, 2 * Math.PI);
+    context.fillStyle = owner.color;
+    context.fill();
+}
+
+function draw(drawBaseStateImpl = drawBaseState, drawUnitImpl = drawUnit) {
     // Clear the canvas
     context.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -1449,64 +1522,11 @@ function draw() {
 
     // Render game objects
     game_config.bases.forEach((base) => {
-        const { x, y } = base.location; // Get the x and y coordinates from the base's location
-        const baseState = game_state.bases[base.id];
-        const ownerid = baseState.ownerid;
-        const radius = baseRadius;
-
-        // Draw the player's stream image
-        const playerStream = playerStreams[ownerid];
-        if (playerStream) {
-            const videoRadius = radius - 2; // Leave a small color border around the video
-            const videoTrack = playerStream.stream.getVideoTracks()[0];
-            const videoSettings = videoTrack.getSettings();
-            const videoWidth = videoSettings.width;
-            const videoHeight = videoSettings.height;
-            const videoZoom = 4; // Adjust the zoom level here
-            const videoScale = Math.min(videoRadius * 2 / videoWidth, videoRadius * 2 / videoHeight) * videoZoom;
-            const videoScaledWidth = videoWidth * videoScale;
-            const videoScaledHeight = videoHeight * videoScale;
-            const videoScaledX = x - videoScaledWidth / 2;
-            const videoScaledY = y - videoScaledHeight / 2;
-
-            context.save();
-            context.beginPath();
-            context.arc(x, y, videoRadius, 0, 2 * Math.PI);
-            context.clip();
-            context.drawImage(playerStream.element, videoScaledX, videoScaledY, videoScaledWidth, videoScaledHeight);
-            context.restore();
-
-            // Draw the training rate above circle to not overlap video
-            context.font = '15px Arial';
-            context.fillStyle = 'black';
-            context.textAlign = 'center';
-            context.fillText('+' + base.trainingRate.toFixed(1), x - 3, y - 24);
-        }
-        else {
-            // Draw the training rate inside circle
-            context.font = '15px Arial';
-            context.fillStyle = 'white';
-            context.textAlign = 'center';
-            context.fillText('+' + base.trainingRate.toFixed(1), x - 3, y + 5);
-        }
-
-        // Draw the number of units
-        context.font = '20px Arial';
-        context.fillStyle = 'black';
-        context.textAlign = 'center';
-        context.fillText(parseInt(baseState.units), x, y + radius + 20);
+        drawBaseStateImpl(base);
     });
 
     game_state.units.forEach((unit) => {
-        const { x, y } = unit.location;
-        const owner = game_state.players[unit.ownerid];
-        const radius = 10;
-
-        // Draw the unit circle
-        context.beginPath();
-        context.arc(x, y, radius, 0, 2 * Math.PI);
-        context.fillStyle = owner.color;
-        context.fill();
+        drawUnitImpl(unit);
     });
 
     if (isDragging && dragStartBase && dragLocation) {
@@ -1623,7 +1643,8 @@ function update(timestamp) {
     else if (deltaTime >= frame_time) {
         lastFrameTime = timestamp;
         updateState(deltaTime * game_state.speed);
-        draw();
+        drawBaseStateFunc = editingMap ? drawBaseState_Editor : drawBaseState;
+        draw(drawBaseStateFunc);
         if (autoSaveCheckbox.checked) {
             saveGameState(AUTOSAVE_NAME);
         }
