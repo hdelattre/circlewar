@@ -618,6 +618,9 @@ gameWindow.addEventListener('mousedown', handleMouseDown);
 gameWindow.addEventListener('mousemove', handleMouseMove);
 gameWindow.addEventListener('mouseup', handleMouseUp);
 
+window.addEventListener('keydown', handleArrowKeysPressed);
+window.addEventListener('keyup', handleArrowKeysReleased);
+
 leaveGameButton.addEventListener('click', leaveGame);
 restartGameButton.addEventListener('click', restartGame);
 saveMapButton.addEventListener('click', saveEditedMap);
@@ -632,6 +635,7 @@ let dragEndBase = null;
 let hoveredBase = null;
 let hoveredTime = 0;
 let lastTouchDistance = 0;
+let inputAxis = { x: 0, y: 0 };
 const selectMargin = 35;
 const selectHoverTime = 0.3;
 let selectedBases = [];
@@ -748,6 +752,24 @@ function handleTouchUp(event) {
     }
 }
 
+function handleArrowKeysPressed(event) {
+    if (!isGameStarted() || !editingMap) return;
+    const key = event.key;
+    if (key == 'ArrowLeft' || key == 'a') inputAxis.x = -1;
+    if (key == 'ArrowRight' || key == 'd') inputAxis.x = 1;
+    if (key == 'ArrowUp' || key == 'w') inputAxis.y = 1;
+    if (key == 'ArrowDown' || key == 's') inputAxis.y = -1;
+}
+
+function handleArrowKeysReleased(event) {
+    if (!isGameStarted() || !editingMap) return;
+    const key = event.key;
+    if (key == 'ArrowLeft' || key == 'a') inputAxis.x = 0;
+    if (key == 'ArrowRight' || key == 'd') inputAxis.x = 0;
+    if (key == 'ArrowUp' || key == 'w') inputAxis.y = 0;
+    if (key == 'ArrowDown' || key == 's') inputAxis.y = 0;
+}
+
 function resetDragging() {
     dragStartBase = null;
     dragEndBase = null;
@@ -776,7 +798,7 @@ function input_clickLocation(location) {
         if (!isLocationInsideCanvas(location, baseMinDist + 5)) return;
         const newBase = {
             id: game_config.bases.length,
-            trainingRate: .2 + random(),
+            trainingRate: .5,
             unittype: UNIT_SOLDIER,
             location: location
         };
@@ -788,14 +810,14 @@ function input_clickLocation(location) {
             autotarget: null,
         });
         basesDrawDirty = true;
+        hoveredBase = newBase;
+        hoveredTime = 0;
     }
 }
 
 function input_hoverLocation(location) {
-    if (!isDragging) return;
-    if (!canDragBase(dragStartBase)) {
+    if (isDragging && !canDragBase(dragStartBase)) {
         isDragging = false;
-        return;
     }
 
     const newHoveredBase = selectBase(location);
@@ -1301,7 +1323,7 @@ function updateState(deltaTime) {
 function updateInput(deltaTime) {
     if (hoveredBase) {
         hoveredTime += deltaTime;
-        if (hoveredTime >= selectHoverTime && selectedBases.indexOf(hoveredBase.id) < 0) {
+        if (isDragging && hoveredTime >= selectHoverTime && selectedBases.indexOf(hoveredBase.id) < 0) {
             if (editingMap) {
                 selectedBases.forEach((id) => {
                     if (game_config.roads[id].indexOf(hoveredBase.id) < 0) {
@@ -1313,6 +1335,13 @@ function updateInput(deltaTime) {
             }
             selectedBases.push(hoveredBase.id);
             hoveredBase = null;
+        }
+        else if (editingMap) {
+            if (inputAxis.y != 0) {
+                const updatedTrainingRate = hoveredBase.trainingRate + inputAxis.y * deltaTime * 0.25;
+                hoveredBase.trainingRate = Math.max(0, updatedTrainingRate);
+                basesDrawDirty = true;
+            }
         }
     }
 }
