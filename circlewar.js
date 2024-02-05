@@ -85,7 +85,12 @@ function initGame(game_options) {
     let config = null;
     let loadedState = null;
 
-    if (isRandomMap) {
+    if (!isRandomMap) {
+        config = loadMap(game_options.map_name);
+        config.ai_players = game_options.num_ai_players;
+        loadedState = loadGameState(config.map_name);
+    }
+    if (config == null) {
         const seed = game_options.seed < 0 ? Math.floor(Math.random() * 1000000) : game_options.seed;
         config = {
             map_name: null,
@@ -97,15 +102,6 @@ function initGame(game_options) {
             ai_players: game_options.num_ai_players,
             game_speed: game_options.game_speed,
         }
-    }
-    else {
-        config = loadMap(game_options.map_name);
-        if (!config) {
-            returnToMenu();
-            return;
-        }
-        config.ai_players = game_options.num_ai_players;
-        loadedState = loadGameState(config.map_name);
     }
 
     initFromConfig(config);
