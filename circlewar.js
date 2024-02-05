@@ -1805,7 +1805,7 @@ function isValidMapName(mapName) {
 function saveEditedMap() {
     if (!editingMap || !isGameStarted()) return;
 
-    if (saveMap(game_config)) {
+    if (saveMap(game_config, game_state)) {
         setSelectedLevelName(game_config.map_name);
 
         leaveGame();
@@ -1824,7 +1824,7 @@ function saveAsEditedMap() {
     saveEditedMap();
 }
 
-function saveMap(mapConfig) {
+function saveMap(mapConfig, mapState) {
     let mapName = mapConfig.map_name;
     if (!isValidMapName(mapName)) {
         mapName = prompt("Enter a name for the map:").trim();
@@ -1844,7 +1844,7 @@ function saveMap(mapConfig) {
     }
 
     localStorage.setItem(mapConfigName, JSON.stringify(mapConfig));
-    saveGameState(mapSaveName);
+    localStorage.setItem(mapSaveName + SAVE_STATE_SUFFIX, JSON.stringify(mapState));
 
     if (!mapExists) {
         const mapListStr = localStorage.getItem('mapList');
@@ -1875,7 +1875,8 @@ function copyMapToClipboard() {
         }, 1000);
     }
 
-    const mapConfig = JSON.stringify(game_config);
+    const mapData = { config: game_config, state: game_state };
+    const mapConfig = JSON.stringify(mapData);
     navigator.clipboard.writeText(mapConfig).then(() => {
         setCopyText("Copied!");
     }, (err) => {

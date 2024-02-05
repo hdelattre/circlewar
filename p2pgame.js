@@ -257,14 +257,14 @@ function pasteMap() {
 
     navigator.clipboard.readText().then(
         (text) => {
-            let mapConfig = null;
+            let mapData = null;
             try {
-                mapConfig = JSON.parse(text);
+                mapData = JSON.parse(text);
             } catch (error) {
                 // Invalid JSON
             }
-            if (mapConfig && saveMap(mapConfig)) {
-                setSelectedLevelName(mapConfig.map_name);
+            if (mapData && saveMap(mapData.config, mapData.state)) {
+                setSelectedLevelName(mapData.config.map_name);
                 setPasteText("Map Saved!");
                 return;
             }
