@@ -447,6 +447,36 @@ function startSinglePlayerGame() {
     startGame(hosted_game_options);
 }
 
+function gameOver(winnerId, winnerName, winnerColor) {
+    closeConnections();
+
+    setCookie(COOKIE_GAMEACTIVE, null, 0.1);
+
+    const gameOverText = document.getElementById('gameOverText');
+    const capitalizedColor = winnerColor.charAt(0).toUpperCase() + winnerColor.slice(1);
+    gameOverText.textContent = capitalizedColor + ' Wins!';
+    gameOverText.style.color = winnerColor;
+    switchStage('gameStage', 'gameOverStage');
+
+    if (musicCheckbox.checked) {
+        const audioFileIndex = Math.floor(Math.random() * 2);
+        const audioFileSuffix = audioFileIndex == 0 ? '' : ' 2';
+        const audioFileName = 'assets/Lost Heroes of the Circle War' + audioFileSuffix + '.mp3';
+        endCreditsAudio = new Audio(audioFileName);
+        endCreditsAudio.addEventListener('canplaythrough', () => {
+            endCreditsAudio.volume = 0.04;
+            endCreditsAudio.loop = true;
+            endCreditsAudio.play();
+        });
+        endCreditsAudio.load();
+    }
+}
+
+function returnToMenu() {
+    closeConnections();
+    switchStage('gameStage', 'hostStage');
+}
+
 // ----- CONNECTIONS -----
 
 let peer = null;
@@ -579,37 +609,6 @@ function startCamera(controlledPlayerId) {
             console.log('Failed to get local stream', err);
         }
     );
-}
-
-function gameOver(winnerId, winnerName, winnerColor) {
-
-    closeConnections();
-
-    setCookie(COOKIE_GAMEACTIVE, null, 0.1);
-
-    const gameOverText = document.getElementById('gameOverText');
-    const capitalizedColor = winnerColor.charAt(0).toUpperCase() + winnerColor.slice(1);
-    gameOverText.textContent = capitalizedColor + ' Wins!';
-    gameOverText.style.color = winnerColor;
-    switchStage('gameStage', 'gameOverStage');
-
-    if (musicCheckbox.checked) {
-        const audioFileIndex = Math.floor(Math.random() * 2);
-        const audioFileSuffix = audioFileIndex == 0 ? '' : ' 2';
-        const audioFileName = 'assets/Lost Heroes of the Circle War' + audioFileSuffix + '.mp3';
-        endCreditsAudio = new Audio(audioFileName);
-        endCreditsAudio.addEventListener('canplaythrough', () => {
-            endCreditsAudio.volume = 0.04;
-            endCreditsAudio.loop = true;
-            endCreditsAudio.play();
-        });
-        endCreditsAudio.load();
-    }
-}
-
-function returnToMenu() {
-    closeConnections();
-    switchStage('gameStage', 'hostStage');
 }
 
 // Display copy link button and setup click event
