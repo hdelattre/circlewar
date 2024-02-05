@@ -5,9 +5,12 @@
 const gameWindow = document.getElementById('gameWindow');
 const canvas = document.getElementById('gameCanvas');
 const context = canvas.getContext('2d');
+const gameControls = document.getElementById('gameControls');
+const mapEditorControls = document.getElementById('mapEditorControls');
 const leaveGameButton = document.getElementById('leaveGameButton');
 const restartGameButton = document.getElementById('restartGameButton');
 const saveMapButton = document.getElementById('saveMapButton');
+const saveAsMapButton = document.getElementById('saveAsMapButton');
 const copyMapButton = document.getElementById('copyMapButton');
 
 // ------ GAME TYPES ------
@@ -620,6 +623,7 @@ window.addEventListener('keyup', handleArrowKeysReleased);
 leaveGameButton.addEventListener('click', leaveGame);
 restartGameButton.addEventListener('click', restartGame);
 saveMapButton.addEventListener('click', saveEditedMap);
+saveAsMapButton.addEventListener('click', saveAsEditedMap);
 copyMapButton.addEventListener('click', copyMapToClipboard);
 
 let editingMap = false;
@@ -1645,8 +1649,8 @@ function startGame(game_options) {
 
     editingMap = false;
 
-    saveMapButton.style.display = "none";
-    copyMapButton.style.display = "none";
+    gameControls.style.display = "inline";
+    mapEditorControls.style.display = "none";
 
     checkForGestureNav();
     setTouchInputsLockedToGame(true);
@@ -1731,9 +1735,9 @@ function startMapEditor(game_options) {
     checkForGestureNav();
     setTouchInputsLockedToGame(true);
 
-    saveMapButton.style.display = "inline";
-    copyMapButton.style.display = "inline";
-    restartGameButton.style.display = "none";
+    gameControls.style.display = "none";
+    mapEditorControls.style.display = "inline";
+    saveAsMapButton.style.display = game_options.map_name == null ? "none" : "inline";
 
     const editorGameOptions = {
         map_name: game_options.map_name,
@@ -1760,10 +1764,23 @@ function isValidMapName(mapName) {
 function saveEditedMap() {
     if (!editingMap || !isGameStarted()) return;
 
-    saveMap(game_config);
-    setSelectedLevelName(game_config.map_name);
+    if (saveMap(game_config)) {
+        setSelectedLevelName(game_config.map_name);
 
-    leaveGame();
+        leaveGame();
+    }
+}
+
+function saveAsEditedMap() {
+    if (!editingMap || !isGameStarted()) return;
+
+    const mapName = prompt("Enter a name for the map:").trim();
+    if (!isValidMapName(mapName)) {
+        return;
+    }
+    game_config.map_name = mapName;
+
+    saveEditedMap();
 }
 
 function saveMap(mapConfig) {
