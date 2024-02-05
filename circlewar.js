@@ -5,6 +5,7 @@
 const gameWindow = document.getElementById('gameWindow');
 const canvas = document.getElementById('gameCanvas');
 const context = canvas.getContext('2d');
+const gameToolbar = document.getElementById('gameToolbar');
 const gameControls = document.getElementById('gameControls');
 const mapEditorControls = document.getElementById('mapEditorControls');
 const leaveGameButton = document.getElementById('leaveGameButton');
@@ -621,6 +622,10 @@ gameWindow.addEventListener('touchcancel', handleTouchUp, { passive: false });
 gameWindow.addEventListener('mousedown', handleMouseDown);
 gameWindow.addEventListener('mousemove', handleMouseMove);
 gameWindow.addEventListener('mouseup', handleMouseUp);
+
+gameToolbar.addEventListener('touchstart', function(event) { event.stopPropagation(); });
+gameToolbar.addEventListener('touchmove', function(event) { event.stopPropagation(); });
+gameToolbar.addEventListener('touchend', function(event) { event.stopPropagation(); });
 
 window.addEventListener('keydown', handleArrowKeysPressed);
 window.addEventListener('keyup', handleArrowKeysReleased);
