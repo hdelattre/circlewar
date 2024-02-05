@@ -188,7 +188,7 @@ function generateMap(num_bases, roads_only) {
                     }
                     return curr;
                 });
-                addRoad(base, closestBase);
+                addRoad(base.id, closestBase.id);
             }
         });
     }
@@ -297,9 +297,10 @@ function addBase(base) {
     game_config.roads.push([]);
 }
 
-function addRoad(startBase, endBase) {
-    game_config.roads[startBase.id].push(endBase.id);
-    game_config.roads[endBase.id].push(startBase.id);
+function addRoad(startBaseId, endBaseId) {
+    if (startBaseId == endBaseId) return;
+    game_config.roads[startBaseId].push(endBaseId);
+    game_config.roads[endBaseId].push(startBaseId);
 }
 
 function assignStartBase(base, playerid) {
@@ -862,8 +863,7 @@ function input_releaseLocation(location) {
             else {
                 selectedBases.forEach((id) => {
                     if (game_config.roads[id].indexOf(dragEndBase.id) < 0) {
-                        game_config.roads[id].push(dragEndBase.id);
-                        game_config.roads[dragEndBase.id].push(id);
+                        addRoad(id, dragEndBase.id);
                     }
                 });
             }
