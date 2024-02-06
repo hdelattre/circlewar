@@ -1576,7 +1576,7 @@ function draw(drawBaseStateImpl = drawBaseState, drawUnitImpl = drawUnit) {
         if (drawsToNextSnapshot <= 0) {
             drawsToNextSnapshot = 2;
             if (dirtyBaseCaptures.length > 0) {
-                addGifDeltaFrame(dirtyBaseCaptures.slice());
+                addGifDeltaFrame(dirtyBaseCaptures);
                 dirtyBaseCaptures = [];
             }
         }
