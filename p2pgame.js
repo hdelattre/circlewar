@@ -193,8 +193,8 @@ function setSelectedLevel(levelIndex) {
         generationOptionsDiv.style.display = 'none';
         return;
     }
-    if (levelsDropdown.value < 0) return;
     generationOptionsDiv.style.display = 'block';
+    if (levelsDropdown.value < 0) return;
     const level = challenge_levels[levelIndex];
     aiSlider.value = level.ai_players;
     aiSliderLabel.textContent = level.ai_players;
