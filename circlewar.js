@@ -1982,7 +1982,7 @@ function compressMap(mapConfig, mapState) {
         s: config.seed,
         m: config.map_size,
         b: config.bases.map(base => ({
-            i: base.id,
+            // i: base.id,
             r: parseFloat(base.trainingRate.toFixed(2)),
             // t: compressUnitType(base.unittype),
             l: { x: parseFloat(base.location.x.toFixed(2)), y: parseFloat(base.location.y.toFixed(2)) },
@@ -1996,7 +1996,7 @@ function compressMap(mapConfig, mapState) {
         s: parseFloat(state.speed.toFixed(2)),
         p: state.players,
         b: state.bases.map(base => ({
-            i: base.id,
+            // i: base.id,
             o: base.ownerid,
             u: parseFloat(base.units.toFixed(2)),
             t: base.autotarget == null ? -1 : base.autotarget
@@ -2023,8 +2023,8 @@ function decompressMap(mapData) {
         map_name: compressedConfig.n,
         seed: compressedConfig.s,
         map_size: compressedConfig.m,
-        bases: compressedConfig.b.map(base => ({
-            id: base.i,
+        bases: compressedConfig.b.map((base, i) => ({
+            id: i, // base.i,
             trainingRate: base.r,
             unittype: 'soldier', // decompressUnitType(base.t),
             location: base.l
@@ -2037,8 +2037,8 @@ function decompressMap(mapData) {
         time: compressedState.t,
         speed: compressedState.s,
         players: compressedState.p,
-        bases: compressedState.b.map(base => ({
-            id: base.i,
+        bases: compressedState.b.map((base, i) => ({
+            id: i, // base.i,
             ownerid: base.o,
             units: base.u,
             autotarget: base.t == -1 ? null : base.t
