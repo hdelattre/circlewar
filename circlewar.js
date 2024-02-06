@@ -43,7 +43,9 @@ function getMaxBases(mapSize) {
 
 // ------ GAME STATE ------
 let game_config = {
+    map_name: null,
     seed: 0,
+    map_size: { x: 800, y: 800 },
     bases: [],
     roads: [],
     roads_only: true,
@@ -1905,14 +1907,6 @@ function loadMap(mapName) {
     return mapConfig;
 }
 
-function compressMap(mapConfig, mapState) {
-    return { config: mapConfig, state: mapState };
-}
-
-function decompressMap(mapData) {
-    return mapData;
-}
-
 function copyMapToClipboard() {
     if (!isGameStarted()) return;
 
@@ -1941,6 +1935,117 @@ function loadMapFromCopiedText(text) {
     }
     if (!mapData) return false;
     return decompressMap(mapData);
+}
+
+// ------ COMPRESSION ------
+
+const COMPRESSION_VERSION = 1;
+
+function getRoadsWithoutDuplicates(baseRoads) {
+    const outRoads = [];
+    for (let i = 0; i < baseRoads.length; i++) {
+        const uniqueRoads = baseRoads[i].filter((roadid) => {
+            return roadid > i;
+        });
+        outRoads.push(uniqueRoads);
+    }
+    return outRoads;
+}
+
+function getRoadsWithDuplicates(baseRoads) {
+    const outRoads = baseRoads.slice();
+    for (let i = 0; i < baseRoads.length; i++) {
+        for (let j = 0; j < baseRoads[i].length; j++) {
+            const baseRoad = baseRoads[i][j];
+            if (outRoads[baseRoad].indexOf(i) < 0) {
+                outRoads[baseRoad].push(i);
+            }
+        }
+    }
+    return outRoads;
+}
+
+function compressMap(mapConfig, mapState) {
+    const compressUnitType = (unittype) => {
+        if (unittype == 'soldier') return 0;
+        return -1;
+    };
+    const compressConfig = (config) => ({
+        n: config.map_name,
+        s: config.seed,
+        m: config.map_size,
+        b: config.bases.map(base => ({
+            i: base.id,
+            r: parseFloat(base.trainingRate.toFixed(2)),
+            // t: compressUnitType(base.unittype),
+            l: { x: parseFloat(base.location.x.toFixed(2)), y: parseFloat(base.location.y.toFixed(2)) },
+        })),
+        r: getRoadsWithoutDuplicates(config.roads),
+        g: config.roads_only
+    });
+
+    const compressState = (state) => ({
+        t: parseFloat(state.time.toFixed(2)),
+        s: parseFloat(state.speed.toFixed(2)),
+        p: state.players,
+        b: state.bases.map(base => ({
+            i: base.id,
+            o: base.ownerid,
+            u: parseFloat(base.units.toFixed(2)),
+            t: base.autotarget == null ? -1 : base.autotarget
+        })),
+        u: state.units.map(unit => ({
+            o: unit.ownerid,
+            l: { x: parseFloat(unit.location.x.toFixed(2)), y: parseFloat(unit.location.y.toFixed(2)) },
+            // t: compressUnitType(unit.unittype),
+            n: unit.targetid,
+            d: unit.destinationid
+        }))
+    });
+
+    return { v: COMPRESSION_VERSION, c: compressConfig(mapConfig), s: compressState(mapState) };
+}
+
+function decompressMap(mapData) {
+    if (mapData.v != COMPRESSION_VERSION) return null;
+    const decompressUnitType = (unittype) => {
+        if (unittype == 0) return 'soldier';
+        return null;
+    }
+    const decompressConfig = (compressedConfig) => ({
+        map_name: compressedConfig.n,
+        seed: compressedConfig.s,
+        map_size: compressedConfig.m,
+        bases: compressedConfig.b.map(base => ({
+            id: base.i,
+            trainingRate: base.r,
+            unittype: 'soldier', // decompressUnitType(base.t),
+            location: base.l
+        })),
+        roads: getRoadsWithDuplicates(compressedConfig.r),
+        roads_only: compressedConfig.g,
+    });
+
+    const decompressState = (compressedState) => ({
+        time: compressedState.t,
+        speed: compressedState.s,
+        players: compressedState.p,
+        bases: compressedState.b.map(base => ({
+            id: base.i,
+            ownerid: base.o,
+            units: base.u,
+            autotarget: base.t == -1 ? null : base.t
+        })),
+        units: compressedState.u.map(unit => ({
+            ownerid: unit.o,
+            location: unit.l,
+            unittype: 'soldier', // decompressUnitType(unit.t),
+            targetid: unit.n,
+            destinationid: unit.d
+        }))
+    });
+
+    return { config: decompressConfig(mapData.c), state: decompressState(mapData.s) };
 }
 
 // ------ LEVELS -------
