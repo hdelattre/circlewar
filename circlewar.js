@@ -163,10 +163,16 @@ function resetGameState() {
             });
         }
     }
-    basesDrawDirty = true;
 
     ai_controllers = [];
     initPlayers();
+
+    drawBackground();
+    drawMap(game_state.bases, basesCanvas, basesContext);
+
+    gifFrames = [];
+    drawsToNextSnapshot = 0;
+    addGifStateFrame(1000);
 }
 
 function generateMap(num_bases, roads_only) {
@@ -624,6 +630,18 @@ function handleWindowResize() {
 
 // Listen for resize events which might indicate a change in navigation mode
 window.addEventListener('resize', handleWindowResize);
+
+function initGifButton() {
+    gameGifImage.style.display = "none";
+    gameGifButton.style.display = "inline";
+    gameGifButton.textContent = "Generate Game Gif";
+    gameGifButton.removeEventListener("click", downloadGifListener);
+    downloadGifListener = () => {
+        gameGifButton.textContent = "Generating Gif...";
+        renderGameGif();
+    };
+    gameGifButton.addEventListener("click", downloadGifListener);
+}
 
 const preventSwipeGesture = function(event) {
     const touchX = event.touches[0].touchX;
@@ -1426,7 +1444,7 @@ let downloadGifListener = null;
 // Draw the background on the offscreen canvas
 function drawBackground() {
     if (editingMap) {
-        backgroundContext.fillStyle = 'black';
+        backgroundContext.fillStyle = '#202020';
         backgroundContext.fillRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
     }
     else {
@@ -1743,6 +1761,7 @@ function startGame(game_options) {
     setTouchInputsLockedToGame(true);
 
     resetInputState();
+    initGifButton();
 
     if (isHost()) {
         restartGameButton.style.display = "inline";
@@ -1754,26 +1773,12 @@ function startGame(game_options) {
     }
     else { // init client
         restartGameButton.style.display = "none";
+        // Gifs not yet supported for non-hosts (since locally simulated captures may not be accurate)
+        gameGifButton.style.display = "none";
         if (cameraCheckbox.checked) {
             startCamera(controlledPlayerId);
         }
     }
-
-    drawBackground();
-    drawMap(game_state.bases, basesCanvas, basesContext);
-
-    gifFrames = [];
-    drawsToNextSnapshot = 0;
-    gameGifButton.style.display = "inline";
-    gameGifImage.style.display = "none";
-    gameGifButton.textContent = "Generate Game Gif";
-    gameGifButton.removeEventListener("click", downloadGifListener);
-    downloadGifListener = () => {
-        gameGifButton.textContent = "Generating Gif...";
-        renderGameGif();
-    };
-    gameGifButton.addEventListener("click", downloadGifListener);
-    addGifStateFrame(1000);
 
     // Start the game loop
     lastFrameTime = performance.now();
@@ -1839,9 +1844,6 @@ function startMapEditor(game_options) {
         game_speed: 1,
     };
     initGame(editorGameOptions);
-
-    drawBackground();
-    drawMap(game_state.bases, basesCanvas, basesContext);
 
     lastFrameTime = performance.now();
     requestAnimationFrame(update_MapEditor);
