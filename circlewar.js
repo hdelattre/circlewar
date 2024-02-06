@@ -1689,6 +1689,9 @@ function renderGameGif() {
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = gifWidth;
         tempCanvas.height = gifHeight;
+        const tempContext = tempCanvas.getContext('2d');
+        tempContext.fillStyle = '#202020';
+        tempContext.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
         if (gifFrame.type == GIF_STATE) {
             lastFrameState = gifFrame.frameState;
         }
