@@ -91,6 +91,7 @@ function initGame(game_options) {
     if (!isRandomMap) {
         config = loadMap(game_options.map_name);
         config.ai_players = game_options.num_ai_players;
+        config.game_speed = game_options.game_speed;
     }
     if (config == null) {
         const seed = game_options.seed < 0 ? Math.floor(Math.random() * 1000000) : game_options.seed;
@@ -140,6 +141,7 @@ function resetGameState() {
 
     if (loadedState) {
         game_state = loadedState;
+        game_state.speed = game_config.game_speed;
     }
     else {
         game_state = {
