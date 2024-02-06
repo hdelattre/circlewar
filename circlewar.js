@@ -679,15 +679,20 @@ let dragEndBase = null;
 let hoveredBase = null;
 let hoveredTime = 0;
 let lastTouchDistance = 0;
-let inputAxis = { x: 0, y: 0 };
 const selectMargin = 35;
 const selectHoverTime = 0.3;
 let selectedBases = [];
 const doubleClickMs = 300;
 let lastClickTime = 0;
 let doubleClick = false;
-
 let isMultitouching = false;
+let inputAxis = { x: 0, y: 0 };
+
+function resetInputState() {
+    resetDragging();
+    isMultitouching = false;
+    inputAxis = { x: 0, y: 0 };
+}
 
 function canDragBase(base) {
     return editingMap || getBaseOwner(base.id) === controlledPlayerId;
@@ -1736,6 +1741,8 @@ function startGame(game_options) {
 
     checkForGestureNav();
     setTouchInputsLockedToGame(true);
+
+    resetInputState();
 
     if (isHost()) {
         restartGameButton.style.display = "inline";
