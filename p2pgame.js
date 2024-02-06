@@ -247,7 +247,7 @@ function addCustomMapToList(mapName) {
 function pasteMap() {
     if (isGameStarted()) return;
 
-    function setPasteText(text) {
+    function setPasteResultText(text) {
         pasteMapButton.textContent = text;
         setTimeout(() => {
             pasteMapButton.textContent = "Paste Map";
@@ -257,21 +257,17 @@ function pasteMap() {
 
     navigator.clipboard.readText().then(
         (text) => {
-            let mapData = null;
-            try {
-                mapData = JSON.parse(text);
-            } catch (error) {
-                // Invalid JSON
-            }
+            const mapData = loadMapFromCopiedText(text);
             if (mapData && saveMap(mapData.config, mapData.state)) {
                 setSelectedLevelName(mapData.config.map_name);
-                setPasteText("Map Saved!");
-                return;
+                setPasteResultText("Map Saved!");
             }
-            setPasteText(invalidMapText);
+            else {
+                setPasteResultText(invalidMapText);
+            }
         },
         (err) => {
-            setPasteText(invalidMapText);
+            setPasteResultText(invalidMapText);
         }
     );
 }

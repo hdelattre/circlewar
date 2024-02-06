@@ -1905,6 +1905,14 @@ function loadMap(mapName) {
     return mapConfig;
 }
 
+function compressMap(mapConfig, mapState) {
+    return { config: mapConfig, state: mapState };
+}
+
+function decompressMap(mapData) {
+    return mapData;
+}
+
 function copyMapToClipboard() {
     if (!isGameStarted()) return;
 
@@ -1915,13 +1923,24 @@ function copyMapToClipboard() {
         }, 1000);
     }
 
-    const mapData = { config: game_config, state: game_state };
+    const mapData = compressMap(game_config, game_state);
     const mapConfig = JSON.stringify(mapData);
     navigator.clipboard.writeText(mapConfig).then(() => {
         setCopyText("Copied!");
     }, (err) => {
         setCopyText("Error!");
     });
+}
+
+function loadMapFromCopiedText(text) {
+    let mapData = null;
+    try {
+        mapData = JSON.parse(text);
+    } catch (error) {
+        // Invalid JSON
+    }
+    if (!mapData) return false;
+    return decompressMap(mapData);
 }
 
 // ------ LEVELS -------
