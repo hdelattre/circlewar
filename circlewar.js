@@ -87,12 +87,10 @@ function initGame(game_options) {
     const isRandomMap = game_options.map_name == null;
 
     let config = null;
-    let loadedState = null;
 
     if (!isRandomMap) {
         config = loadMap(game_options.map_name);
         config.ai_players = game_options.num_ai_players;
-        loadedState = loadGameState(SAVE_MAP_PREFIX + config.map_name);
     }
     if (config == null) {
         const seed = game_options.seed < 0 ? Math.floor(Math.random() * 1000000) : game_options.seed;
@@ -118,14 +116,7 @@ function initGame(game_options) {
 
     restartSeed = seededRandom ? seededRandom.seed : null;
 
-    if (loadedState) {
-        game_state = loadedState;
-        basesDrawDirty = true;
-        initPlayers();
-    }
-    else {
-        resetGameState();
-    }
+    resetGameState();
 }
 
 function resetRandomSeed(seed) {
@@ -140,25 +131,37 @@ function resetRandomSeed(seed) {
 }
 
 function resetGameState() {
-    game_state = {
-        time: 0,
-        speed: game_config.game_speed,
-        players: [],
-        bases: [],
-        units: [],
-    };
-    ai_controllers = [];
 
-    for (let i = game_state.bases.length, n = game_config.bases.length; i < n; i++) {
-        game_state.bases.push({
-            id: game_config.bases[i].id,
-            ownerid: -1,
-            units: 10,
-            autotarget: null,
-        });
+    let loadedState = null;
+
+    if (game_config.map_name != null) {
+        loadedState = loadGameState(SAVE_MAP_PREFIX + game_config.map_name);
+    }
+
+    if (loadedState) {
+        game_state = loadedState;
+    }
+    else {
+        game_state = {
+            time: 0,
+            speed: game_config.game_speed,
+            players: [],
+            bases: [],
+            units: [],
+        };
+
+        for (let i = game_state.bases.length, n = game_config.bases.length; i < n; i++) {
+            game_state.bases.push({
+                id: game_config.bases[i].id,
+                ownerid: -1,
+                units: 10,
+                autotarget: null,
+            });
+        }
     }
     basesDrawDirty = true;
 
+    ai_controllers = [];
     initPlayers();
 }
 
