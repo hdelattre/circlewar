@@ -85,6 +85,7 @@ function loadSettingsFromCookies() {
     const mapSizeYValue = getCookie(COOKIE_MAPSIZEY);
     const userSeedValue = getCookie(COOKIE_SEEDUSER);
     const autoSaveCheckboxValue = getCookie(COOKIE_AUTOSAVE);
+    const lastSeedValue = getCookie(COOKIE_SEEDLAST);
     const gameActiveValue = getCookie(COOKIE_GAMEACTIVE);
 
     if (aiSliderValue) {
@@ -131,6 +132,14 @@ function loadSettingsFromCookies() {
         cameraCheckbox.checked = cameraCheckboxValue == 'true';
     }
 
+    lastSeedButton.style.visibility = lastSeedValue ? 'visible' : 'hidden';
+
+    refreshLevelsList();
+
+    if (cookieLevelValue) {
+        setSelectedLevelName(cookieLevelValue);
+    }
+
     // Game active cookie disable for now
     if (false && gameActiveValue) {
         if (gameActiveValue == COOKIE_GAMEACTIVE_SINGLEPLAYER) {
@@ -144,12 +153,6 @@ function loadSettingsFromCookies() {
         else {
             joinGame(gameActiveValue);
         }
-    }
-
-    refreshLevelsList();
-
-    if (cookieLevelValue) {
-        setSelectedLevelName(cookieLevelValue);
     }
 }
 
