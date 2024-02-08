@@ -1862,7 +1862,6 @@ function saveEditedMap() {
 
     if (saveMap(game_config, game_state)) {
         setSelectedLevelName(game_config.map_name);
-
         leaveGame();
     }
 }
@@ -1889,21 +1888,20 @@ function saveMap(mapConfig, mapState) {
     }
     mapConfig.map_name = mapName;
 
-    const mapSaveName = SAVE_MAP_PREFIX + mapName;
-    const mapConfigName = mapSaveName + SAVE_CONFIG_SUFFIX;
-    const mapExists = localStorage.getItem(mapConfigName) != null;
+    const mapListStr = localStorage.getItem(SAVE_MAPLIST);
+    const mapList = mapListStr ? JSON.parse(mapListStr) : [];
+    const mapExists = mapList.indexOf(mapName) >= 0;
     if (mapExists) {
         if (!confirm("Overwrite existing map '" + mapName + "'?")) {
             return false;
         }
     }
 
-    localStorage.setItem(mapConfigName, JSON.stringify(mapConfig));
+    const mapSaveName = SAVE_MAP_PREFIX + mapName;
+    localStorage.setItem(mapSaveName + SAVE_CONFIG_SUFFIX, JSON.stringify(mapConfig));
     localStorage.setItem(mapSaveName + SAVE_STATE_SUFFIX, JSON.stringify(mapState));
 
     if (!mapExists) {
-        const mapListStr = localStorage.getItem(SAVE_MAPLIST);
-        const mapList = mapListStr ? JSON.parse(mapListStr) : [];
         mapList.push(mapName);
         localStorage.setItem(SAVE_MAPLIST, JSON.stringify(mapList));
         addCustomMapToList(mapName);
