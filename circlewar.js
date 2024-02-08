@@ -2069,6 +2069,7 @@ const challenge_levels = [
     { name: 'Lovely Circle', seed: 697852, ai_players: 7, bases: 18, map_size: { x: 900, y: 900 } },
     { name: 'Paper Crane', seed: 223968, ai_players: 7, bases: 18, map_size: { x: 900, y: 900 } },
     { name: 'Crescent', seed: 820505, ai_players: 4, bases: 20, map_size : { x: 1800, y: 900 } },
+    { name: 'Plug the Hole', seed: 749379, ai_players: 1, bases: 40, map_size: { x: 650, y: 850 } },
     { name: 'The Wheel', seed: 797963, ai_players: 3, bases: 30, map_size: { x: 1600, y: 800 } },
     { name: 'Stamford Bridge', seed: 815694, ai_players: 4, bases: 45, map_size: { x: 1900, y: 900 } },
     { name: 'Old Boy', seed: 520491, ai_players: 4, bases: 60, map_size: { x: 1800, y: 400 } },
