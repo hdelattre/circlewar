@@ -113,7 +113,7 @@ button:focus {
 
 input[type=range] {
     width: 40%;
-    margin: 20px 0;
+    margin: 10px 0;
 }
 
 input[type="text"] {
@@ -244,7 +244,7 @@ svg {
 
 #gameOptions label, 
 #gameOptions input:not([type="checkbox"]) {
-    margin-top: 16px;
+    margin: 10px 0;
 }
 
 #gameOptions span, #startMenu p {

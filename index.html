@@ -55,16 +55,16 @@
                                 <span id="numBasesValue">40</span>
                             </div>
                             <div class="menuOption">
-                                <label for="roadsCheckbox">Roads</label>
-                                <input type="checkbox" id="roadsCheckbox" checked>
-                            </div>
-                            <div class="menuOption">
                                 <label for="mapSizeXText">Map X</label>
                                 <input type="text" id="mapSizeXText" placeholder="Enter map X" value="650">
                             </div>
                             <div class="menuOption">
                                 <label for="mapSizeYText">Map Y</label>
                                 <input type="text" id="mapSizeYText" placeholder="Enter map Y" value="850">
+                            </div>
+                            <div class="menuOption">
+                                <label for="roadsCheckbox">Roads</label>
+                                <input type="checkbox" id="roadsCheckbox" checked>
                             </div>
                             <div class="menuOption">
                                 <label for="gameSeedText">Seed</label>
@@ -74,6 +74,11 @@
                                 </button>
                                 <button id="lastSeedButton" style="visibility: hidden;">Last Seed</button>
                             </div>
+                        </div>
+                        <div class="rangeOption">
+                            <label for="gameSpeedSlider">Game Speed</label>
+                            <input type="range" id="gameSpeedSlider" min="1" max="20" value="1">
+                            <span id="gameSpeedValue">1</span>
                         </div>
                         <br>
                         <div class="menuOption">
@@ -87,11 +92,6 @@
                         <div class="menuOption">
                             <label for="musicCheckbox">Music</label>
                             <input type="checkbox" id="musicCheckbox" unchecked>
-                        </div>
-                        <div class="rangeOption">
-                            <label for="gameSpeedSlider">Game Speed</label>
-                            <input type="range" id="gameSpeedSlider" min="1" max="20" value="1">
-                            <span id="gameSpeedValue">1</span>
                         </div>
                     </div>
                 </div>
