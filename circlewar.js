@@ -1940,7 +1940,7 @@ function copyMapToClipboard() {
     function setCopyText(text) {
         copyMapButton.textContent = text;
         setTimeout(() => {
-            copyMapButton.textContent = "Copy Map";
+            copyMapButton.textContent = "Copy";
         }, 1000);
     }
 
