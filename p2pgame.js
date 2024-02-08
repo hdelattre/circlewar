@@ -6,6 +6,8 @@
 const hostGameButton = document.getElementById('hostGameButton');
 const joinGameButton = document.getElementById('joinGameButton');
 const mapEditorButton = document.getElementById('mapEditorButton');
+const newMapButton = document.getElementById('newMapButton');
+const deleteMapButton = document.getElementById('deleteMapButton');
 const pasteMapButton = document.getElementById('pasteMapButton');
 const singlePlayerButton = document.getElementById('singlePlayerButton');
 const generationOptionsDiv = document.getElementById('mapGenerationOptions');
@@ -177,12 +179,16 @@ autoSaveCheckbox.oninput = updateSetting_autoSave;
 musicCheckbox.oninput = updateSetting_music;
 cameraCheckbox.oninput = updateSetting_camera;
 
+function setLevelDropdownIndex(index) {
+    levelsDropdown.selectedIndex = index;
+    setSelectedLevel(levelsDropdown.value);
+}
+
 function setSelectedLevelName(levelName) {
     for (let i = 0, n = levelsDropdown.options.length; i < n; i++) {
         const option = levelsDropdown.options[i];
         if (option.textContent == levelName) {
-            levelsDropdown.selectedIndex = i;
-            setSelectedLevel(levelsDropdown.value);
+            setLevelDropdownIndex(i);
             return;
         }
     }
@@ -244,30 +250,44 @@ function addCustomMapToList(mapName) {
     levelsDropdown.appendChild(mapOption);
 }
 
+function newMap() {
+    setLevelDropdownIndex(0);
+}
+
+function deleteSelectedMap() {
+    if (levelsDropdown.value != LEVELINDEX_CUSTOMMAPS) return;
+    const mapName = levelsDropdown.options[levelsDropdown.selectedIndex].textContent;
+    if (!confirm("Delete map '" + mapName + "'?")) {
+        return;
+    }
+    if (!deleteMap(mapName)) return;
+    levelsDropdown.remove(levelsDropdown.selectedIndex);
+    refreshLevelsList();
+}
+
 function pasteMap() {
     if (isGameStarted()) return;
 
-    function setPasteResultText(text) {
-        pasteMapButton.textContent = text;
+    function setPasteResultText(pasteSuccess) {
+        pasteMapButton.firstElementChild.src = pasteSuccess ? 'assets/checkmark.svg' : 'assets/xmark.svg';
         setTimeout(() => {
-            pasteMapButton.textContent = "Paste Map";
+            pasteMapButton.firstElementChild.src = 'assets/paste.svg';
         }, 1000);
     }
-    const invalidMapText = "Invalid Map!";
 
     navigator.clipboard.readText().then(
         (text) => {
             const mapData = loadMapFromCopiedText(text);
             if (mapData && saveMap(mapData.config, mapData.state)) {
                 setSelectedLevelName(mapData.config.map_name);
-                setPasteResultText("Map Saved!");
+                setPasteResultText(true);
             }
             else {
-                setPasteResultText(invalidMapText);
+                setPasteResultText(false);
             }
         },
         (err) => {
-            setPasteResultText(invalidMapText);
+            setPasteResultText(false);
         }
     );
 }
@@ -329,6 +349,8 @@ gameSeedText.addEventListener('change', () => {
     setCookie(COOKIE_SEEDUSER, gameSeedText.value, cookieExpirationDays);
 });
 
+newMapButton.addEventListener('click', newMap);
+deleteMapButton.addEventListener('click', deleteSelectedMap);
 pasteMapButton.addEventListener('click', pasteMap);
 
 lastSeedButton.addEventListener('click', () => {

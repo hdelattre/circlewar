@@ -66,6 +66,7 @@ const AUTOSAVE_NAME = '_autosave';
 const SAVE_CONFIG_SUFFIX = '_config';
 const SAVE_STATE_SUFFIX = '_state';
 const SAVE_MAP_PREFIX = 'map_';
+const SAVE_MAPLIST = 'mapList';
 let restartSeed = null;
 let shortestPathImpl = null;
 
@@ -1901,10 +1902,10 @@ function saveMap(mapConfig, mapState) {
     localStorage.setItem(mapSaveName + SAVE_STATE_SUFFIX, JSON.stringify(mapState));
 
     if (!mapExists) {
-        const mapListStr = localStorage.getItem('mapList');
+        const mapListStr = localStorage.getItem(SAVE_MAPLIST);
         const mapList = mapListStr ? JSON.parse(mapListStr) : [];
         mapList.push(mapName);
-        localStorage.setItem('mapList', JSON.stringify(mapList));
+        localStorage.setItem(SAVE_MAPLIST, JSON.stringify(mapList));
         addCustomMapToList(mapName);
     }
 
@@ -1917,6 +1918,20 @@ function loadMap(mapName) {
     if (!mapConfigStr) return null;
     const mapConfig = JSON.parse(mapConfigStr);
     return mapConfig;
+}
+
+function deleteMap(mapName) {
+    const mapListStr = localStorage.getItem(SAVE_MAPLIST);
+    if (!mapListStr) return false;
+    const mapList = JSON.parse(mapListStr);
+    const index = mapList.indexOf(mapName);
+    if (index < 0) return false;
+    mapList.splice(index, 1);
+    localStorage.setItem(SAVE_MAPLIST, JSON.stringify(mapList));
+    const mapSaveName = SAVE_MAP_PREFIX + mapName;
+    localStorage.removeItem(mapSaveName + SAVE_CONFIG_SUFFIX);
+    localStorage.removeItem(mapSaveName + SAVE_STATE_SUFFIX);
+    return true;
 }
 
 function copyMapToClipboard() {
