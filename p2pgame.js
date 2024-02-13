@@ -266,6 +266,7 @@ function deleteSelectedMap() {
     if (!deleteMap(mapName)) return;
     levelsDropdown.remove(levelsDropdown.selectedIndex);
     refreshLevelsList();
+    setLevelDropdownIndex(0);
 }
 
 function pasteMap() {
