@@ -1,5 +1,5 @@
 
-# Plat at https://hdelattre.github.io/circlewar/
+# Play at https://hdelattre.github.io/circlewar/
 
 # About
 
