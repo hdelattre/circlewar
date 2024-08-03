@@ -530,8 +530,15 @@ function registerPlayerStream(playerId, stream, is_local) {
     playerStreams[playerId] = { stream: stream, element: streamElement };
     document.getElementById('streamsContainer').appendChild(streamElement);
 }
+async function importPeerJS() {
+    if (typeof Peer === 'undefined') {
+        await import('https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js');
+    }
+}
 
-function hostGame() {
+async function hostGame() {
+    await importPeerJS();
+
     localPlayerId = 0;
     peer = new Peer(); // Create a new peer with a random ID
 
@@ -567,7 +574,9 @@ function hostGame() {
     switchStage('hostStage', 'pendingStage');
 }
 
-function joinGame(peerId) {
+async function joinGame(peerId) {
+    await importPeerJS();
+
     peer = new Peer();
 
     peer.on('open', () => {
