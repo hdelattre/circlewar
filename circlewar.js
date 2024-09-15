@@ -42,21 +42,73 @@ function getMaxBases(mapSize) {
 }
 
 // ------ GAME STATE ------
-let game_config = {
-    map_name: null,
-    seed: 0,
-    map_size: { x: 800, y: 800 },
-    bases: [],
-    roads: [],
-    roads_only: true,
+function GameConfig(map_name, seed, map_size, bases, roads, roads_enabled) {
+    return {
+        map_name: map_name,
+        seed: seed,
+        map_size: map_size,
+        bases: bases,
+        roads: roads,
+        roads_enabled: roads_enabled,
+        ai_players: 0,
+        game_speed: 1
+    };
 }
-let game_state = {
-    time: 0,
-    speed: 1,
-    players: [],
-    bases: [],
-    units: [],
+
+function GameConfig(game_options) {
+    const seed = game_options.seed < 0 ? Math.floor(Math.random() * 1000000) : game_options.seed;
+    return {
+        map_name: null,
+        seed: seed,
+        map_size: game_options.map_size,
+        bases: [],
+        roads: [],
+        roads_enabled: game_options.roads_enabled,
+        ai_players: game_options.num_ai_players,
+        game_speed: game_options.game_speed
+    };
 }
+
+function GameState(time = 0, speed = 1) {
+    return {
+        time: time,
+        speed: speed,
+        players: [],
+        bases: [],
+        units: []
+    };
+}
+
+function Base(id, trainingRate, unittype, location) {
+    return {
+        id: id,
+        trainingRate: trainingRate,
+        unittype: unittype,
+        location: location
+    };
+}
+
+function BaseState(id, ownerid = -1, units = 10, autotarget = null) {
+    return {
+        id: id,
+        ownerid: ownerid,
+        units: units,
+        autotarget: autotarget
+    };
+}
+
+function Unit(ownerid, location, unittype, targetid, destinationid = null) {
+    return {
+        ownerid: ownerid,
+        location: location,
+        unittype: unittype,
+        targetid: targetid,
+        destinationid: destinationid
+    };
+}
+
+let game_config = null;
+let game_state = null;
 
 let ai_controllers = [];
 
@@ -76,7 +128,7 @@ function initFromConfig(config) {
     game_config = config;
 
     game_config.owned_adjacent = false;
-    if (game_config.roads_only) {
+    if (game_config.roads_enabled) {
         shortestPathImpl = game_config.bases.length < 120 ? shortestPath_Dijkstra : shortestPath_AStarBases;
     }
 
@@ -98,16 +150,7 @@ function initGame(game_options) {
     }
     if (config == null) {
         const seed = game_options.seed < 0 ? Math.floor(Math.random() * 1000000) : game_options.seed;
-        config = {
-            map_name: null,
-            seed: seed,
-            map_size: game_options.map_size,
-            bases: [],
-            roads: [],
-            roads_only: game_options.roads_enabled,
-            ai_players: game_options.num_ai_players,
-            game_speed: game_options.game_speed,
-        }
+        config = GameConfig(game_options);
     }
 
     initFromConfig(config);
@@ -115,7 +158,7 @@ function initGame(game_options) {
     resetRandomSeed(game_config.seed);
 
     if (isRandomMap) {
-        generateMap(game_options.num_bases, game_config.roads_only);
+        generateMap(game_options.num_bases, game_config.roads_enabled);
     }
 
     restartSeed = seededRandom ? seededRandom.seed : null;
@@ -147,21 +190,10 @@ function resetGameState() {
         game_state.speed = game_config.game_speed;
     }
     else {
-        game_state = {
-            time: 0,
-            speed: game_config.game_speed,
-            players: [],
-            bases: [],
-            units: [],
-        };
+        game_state = GameState(0, game_config.game_speed);
 
         for (let i = game_state.bases.length, n = game_config.bases.length; i < n; i++) {
-            game_state.bases.push({
-                id: game_config.bases[i].id,
-                ownerid: -1,
-                units: 10,
-                autotarget: null,
-            });
+            game_state.bases.push(BaseState(game_config.bases[i].id));
         }
     }
 
@@ -176,20 +208,20 @@ function resetGameState() {
     addGifStateFrame(1000);
 }
 
-function generateMap(num_bases, roads_only) {
+function generateMap(num_bases, roads_enabled) {
     // Init bases
     for (let i = 0; i < num_bases; i++) {
-        const newBase = {
-            id: game_config.bases.length,
-            trainingRate: .2 + random(),
-            unittype: UNIT_SOLDIER,
-            location: getRandomLocation(baseRadius + baseMinDist, game_config.bases)
-        };
+        const newBase = Base(
+            game_config.bases.length,
+            .2 + random(),
+            UNIT_SOLDIER,
+            getRandomLocation(baseRadius + baseMinDist, game_config.bases)
+        );
         addBase(newBase);
     }
 
     // Init roads
-    if (roads_only) {
+    if (roads_enabled) {
         game_config.bases.forEach((base) => {
             const num_roads = Math.floor(random() * 3) + 1;
             for (let i = 0; i < num_roads; i++) {
@@ -246,7 +278,7 @@ function loadGame(saveName) {
         (game_config.seed == savedConfig.seed &&
         game_config.map_size.x == savedConfig.map_size.x &&
         game_config.map_size.y == savedConfig.map_size.y &&
-        game_config.roads_only == savedConfig.roads_only &&
+        game_config.roads_enabled == savedConfig.roads_enabled &&
         game_config.bases.length == savedConfig.bases.length &&
         game_config.ai_players == savedConfig.ai_players);
 
@@ -362,8 +394,8 @@ function getBaseDistance(startId, endId) {
 }
 
 function getShortestPath(startBaseId, endBaseId) {
-    if (!game_config.roads_only || game_config.roads[startBaseId].indexOf(endBaseId) >= 0) { return [endBaseId]; }
-    const ownedAdjacent = game_config.ownedAdjacent && game_config.roads_only;
+    if (!game_config.roads_enabled || game_config.roads[startBaseId].indexOf(endBaseId) >= 0) { return [endBaseId]; }
+    const ownedAdjacent = game_config.ownedAdjacent && game_config.roads_enabled;
     return shortestPathImpl(startBaseId, endBaseId, ownedAdjacent);
 }
 
@@ -464,7 +496,7 @@ function shortestPath_AStar(startBaseId, endBaseId, ownedAdjacent, heuristic = g
 }
 
 function canSendUnits(startBaseId, endBaseId) {
-    return !game_config.roads_only || getShortestPath(startBaseId, endBaseId) != null;
+    return !game_config.roads_enabled || getShortestPath(startBaseId, endBaseId) != null;
 }
 
 function sendUnits(startBase, endBase, numUnits, destinationid = null) {
@@ -504,13 +536,13 @@ function sendUnits(startBase, endBase, numUnits, destinationid = null) {
             const unitX = startX + col * unitSpacing;
             const unitY = startY + row * unitSpacing * Math.sqrt(3) / 2;
 
-            const unit = {
-                ownerid: getBaseOwner(startBase.id),
-                location: { x: unitX, y: unitY },
-                unittype: startBase.unittype,
-                targetid: endBase.id,
-                destinationid: destinationid,
-            };
+            const unit = Unit(
+                getBaseOwner(startBase.id),
+                { x: unitX, y: unitY },
+                startBase.unittype,
+                endBase.id,
+                destinationid
+            );
             spawnedUnits.push(unit);
             game_state.units.push(unit);
         }
@@ -546,7 +578,7 @@ function updateUnits(units, deltaTime, allow_capture = true) {
                     }
                 }
 
-                if (game_config.roads_only && unit.destinationid != null) {
+                if (game_config.roads_enabled && unit.destinationid != null) {
                     if (!baseOwned) {
                         unit.destinationid = null;
                         return;
@@ -864,19 +896,14 @@ function input_clickLocation(location) {
     }
     else if (editingMap) {
         if (!isLocationInsideCanvas(location, baseMinDist + 5)) return;
-        const newBase = {
-            id: game_config.bases.length,
-            trainingRate: .5,
-            unittype: UNIT_SOLDIER,
-            location: location
-        };
+        const newBase = Base(
+            game_config.bases.length,
+            0.5,
+            UNIT_SOLDIER,
+            location
+        );
         addBase(newBase);
-        game_state.bases.push({
-            id: newBase.id,
-            ownerid: -1,
-            units: 10,
-            autotarget: null,
-        });
+        game_state.bases.push(BaseState(newBase.id));
         basesDrawDirty = true;
         hoveredBase = newBase;
         hoveredTime = 0;
@@ -954,7 +981,7 @@ function input_sendUnits(controlId, startBaseId, endBaseId, numUnits, forever) {
     const shortestPath = getShortestPath(startBaseId, endBaseId);
     if (shortestPath == null) return;
     game_state.bases[startBaseId].autotarget = forever ? endBaseId : null;
-    const nextBase = game_config.roads_only ? game_config.bases[shortestPath[0]] : endBase;
+    const nextBase = game_config.roads_enabled ? game_config.bases[shortestPath[0]] : endBase;
     sendUnits(startBase, nextBase, numUnits, endBaseId);
     sendMessage_SendUnits(controlId, startBaseId, nextBase.id, numUnits, endBase.id, forever);
 }
@@ -1130,7 +1157,7 @@ function gatherAIState(ai_controller, ownedBases, neutralBases) {
     let ai_state = {
         playerBases: [],
         enemyBases: [],
-        neutralBases: game_config.roads_only ? [] : neutralBases,
+        neutralBases: game_config.roads_enabled ? [] : neutralBases,
         playerUnits: [],
         enemyUnits: [],
     };
@@ -1139,12 +1166,12 @@ function gatherAIState(ai_controller, ownedBases, neutralBases) {
         if (getBaseOwner(base.id) == playerid) {
             ai_state.playerBases.push(base);
 
-        } else if (!game_config.roads_only) {
+        } else if (!game_config.roads_enabled) {
             ai_state.enemyBases.push(base);
         }
     });
 
-    if (game_config.roads_only) {
+    if (game_config.roads_enabled) {
         ai_state.playerBases.forEach((base) => {
             const roadBases = game_config.roads[base.id].map((roadid) => {
                 return game_config.bases[roadid];
@@ -1317,7 +1344,7 @@ function aiStrategy_normal(ai_controller, ai_state, deltaTime) {
 
     aiUpdateFunction(ai_controller, ai_state);
 
-    if (game_config.roads_only) {
+    if (game_config.roads_enabled) {
         updateAI_reinforceBases(ai_controller, ai_state, deltaTime);
     }
 }
@@ -2006,7 +2033,7 @@ function compressMap(mapConfig, mapState) {
             l: { x: parseFloat(base.location.x.toFixed(2)), y: parseFloat(base.location.y.toFixed(2)) },
         })),
         r: getRoadsWithoutDuplicates(config.roads),
-        g: config.roads_only
+        g: config.roads_enabled
     });
 
     const compressState = (state) => ({
@@ -2048,7 +2075,7 @@ function decompressMap(mapData) {
             location: base.l
         })),
         roads: getRoadsWithDuplicates(compressedConfig.r),
-        roads_only: compressedConfig.g,
+        roads_enabled: compressedConfig.g,
     });
 
     const decompressState = (compressedState) => ({
