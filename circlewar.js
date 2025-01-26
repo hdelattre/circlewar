@@ -1059,7 +1059,7 @@ function makeColorTranslucent(color, opacity) {
 // ------ NETWORKING ------
 
 function updateGameState(new_game_state) {
-    const serverDeltaTime = new_game_state.time - game_state.time;
+    const serverDeltaTime = game_state ? new_game_state.time - game_state.time : 0;
     game_state = new_game_state;
     basesDrawDirty = true;
     // Set time back to simulate forward from the new state
