@@ -301,7 +301,9 @@ function saveSelectedLevel(levelName) {
 }
 
 function refreshMaxBases() {
-    const maxBases = getMaxBases({ x: mapSizeXText.value, y: mapSizeYText.value });
+    const mapX = parseInt(mapSizeXText.value);
+    const mapY = parseInt(mapSizeYText.value);
+    const maxBases = getMaxBases({ x: mapX, y: mapY });
     if (basesSlider.value > maxBases) {
         basesSlider.value = maxBases;
         basesSliderLabel.textContent = basesSlider.value;
