@@ -16,6 +16,7 @@
                 <div id="subMenus">
                     <div id="startMenu">
                         <button id="singlePlayerButton">Single Player</button>
+                        <button id="evolvesButton">Play Evolves (Test)</button>
                         <p>---------</p>
                         <button id="hostGameButton">Host Game</button>
                         <p>or</p>
@@ -152,5 +153,22 @@
     <script src="thirdparty/gifjs/gif.js"></script>
     <script src="circlewar.js"></script>
     <script src="p2pgame.js"></script>
+    <script>
+      (function(){
+        const btn = document.getElementById('evolvesButton');
+        if (!btn) return;
+        let loaded = false;
+        btn.addEventListener('click', function(){
+          const exists = document.getElementById('evolvesRoot');
+          if (exists) { exists.style.display = 'flex'; return; }
+          if (loaded) return;
+          loaded = true;
+          const s = document.createElement('script');
+          s.src = 'evolves.js';
+          s.async = true;
+          document.body.appendChild(s);
+        });
+      })();
+    </script>
 </body>
 </html>
